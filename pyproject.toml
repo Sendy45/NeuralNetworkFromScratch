@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "neuralnetworkfromscratch"
+version = "0.1.0"
+description = "A neural network framework built completely from scratch using NumPy"
+readme = "README.md"
+requires-python = ">=3.8"
+
+authors = [
+  { name="Itamar Senderovitz" }
+]
+
+dependencies = [
+    "numpy>=1.21",
+    "tqdm>=4.60"
+]
+
+keywords = ["neural network", "deep learning", "machine learning", "numpy"]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/Sendy45/NeuralNetworkFromScracth"
