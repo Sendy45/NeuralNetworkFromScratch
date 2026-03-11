@@ -11,3 +11,4 @@ neuralnetworknumpy.egg-info/requires.txt
 neuralnetworknumpy.egg-info/top_level.txt
 tests/test_load.py
 tests/test_model.py
+tests/test_package.py
