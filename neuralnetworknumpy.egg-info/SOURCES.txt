@@ -1,0 +1,13 @@
+README.md
+pyproject.toml
+NeuralNetworkFromScratch/__init__.py
+NeuralNetworkFromScratch/layers.py
+NeuralNetworkFromScratch/model.py
+NeuralNetworkFromScratch/utils.py
+neuralnetworknumpy.egg-info/PKG-INFO
+neuralnetworknumpy.egg-info/SOURCES.txt
+neuralnetworknumpy.egg-info/dependency_links.txt
+neuralnetworknumpy.egg-info/requires.txt
+neuralnetworknumpy.egg-info/top_level.txt
+tests/test_load.py
+tests/test_model.py
