@@ -48,6 +48,9 @@ print("Test X:", test_X.shape, "Test y:", test_y.shape)
 start_time = time.time()
 model.compile(loss_type="cross_entropy", optimizer="adamW", lr=0.001, lambda_=0.01, beta1=0.9, beta2=0.999)
 history = model.fit(train_X, train_y, val_X, val_y, epochs=3, batch_size=64)
+model.summary()
+model.save("model.h5")
+
 print(f"Training time: {time.time() - start_time}")
 
 

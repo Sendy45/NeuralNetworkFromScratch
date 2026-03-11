@@ -1,7 +1,7 @@
 import numpy as np
 from tqdm.auto import tqdm
 
-from .layers import Dropout, Activation, BatchNorm
+from .layers import Dropout, Activation, BatchNorm, Dense
 from .utils import History
 
 class NeuralNetwork:
@@ -18,20 +18,34 @@ class NeuralNetwork:
         self.loss_type = "cross_entropy"
         self.optimizer = "adam"
 
-    """ Requires updating
-
     def save(self, path):
-
         layer_data = []
 
         for layer in self.layers:
-            layer_data.append({
-                "W": layer.W,
-                "b": layer.b,
-                "activation": layer.activation,
-                "out_size": layer.out_size,
-                "initializer": layer.initializer
-            })
+            entry = {"type": type(layer).__name__}
+
+            if isinstance(layer, Dense):
+                entry.update({
+                    "W": layer.W,
+                    "b": layer.b,
+                    "in_size": layer.in_size,
+                    "out_size": layer.out_size,
+                    "initializer": layer.initializer,
+                })
+            elif isinstance(layer, BatchNorm):
+                entry.update({
+                    "gamma": layer.gamma,
+                    "beta": layer.beta,
+                    "running_mean": layer.running_mean,
+                    "running_var": layer.running_var,
+                    "momentum": layer.momentum,
+                })
+            elif isinstance(layer, Dropout):
+                entry["rate"] = layer.rate
+
+            # Activation layers (ReLu, Sigmoid, etc.) need no extra data
+
+            layer_data.append(entry)
 
         np.savez(
             path,
@@ -41,73 +55,103 @@ class NeuralNetwork:
             beta1=self.beta1,
             beta2=self.beta2,
             loss_type=self.loss_type,
-            optimizer=self.optimizer
+            optimizer=self.optimizer,
+            num_classes=self.num_classes,
         )
 
 
     @staticmethod
     def load(path):
+        from .layers import Dense, BatchNorm, Dropout, ReLu, Sigmoid, Softmax, Tanh, Linear
+
+        ACTIVATION_MAP = {
+            "ReLu": ReLu,
+            "Sigmoid": Sigmoid,
+            "Softmax": Softmax,
+            "Tanh": Tanh,
+            "Linear": Linear,
+        }
 
         data = np.load(path, allow_pickle=True)
-
-        layers_data = data["layers"]
-
         layers = []
 
-        for layer_info in layers_data:
-            layer = Dense(
-                units=layer_info["out_size"],
-                activation=layer_info["activation"],
-                kernel_initializer=layer_info["initializer"]
-            )
+        for entry in data["layers"]:
+            layer_type = entry["type"]
 
-            layer.W = layer_info["W"]
-            layer.b = layer_info["b"]
-            layer.in_size = layer.W.shape[1]
+            if layer_type == "Dense":
+                layer = Dense(units=entry["out_size"])
+                layer.W = entry["W"]
+                layer.b = entry["b"]
+                layer.in_size = entry["in_size"]
+                layer.out_size = entry["out_size"]
+                layer.initializer = entry["initializer"]
+                # Restore optimizer states as zeros (not serialized)
+                layer.vW = np.zeros_like(layer.W)
+                layer.vb = np.zeros_like(layer.b)
+                layer.mW = np.zeros_like(layer.W)
+                layer.mb = np.zeros_like(layer.b)
+
+            elif layer_type == "BatchNorm":
+                layer = BatchNorm(momentum=entry["momentum"])
+                layer.gamma = entry["gamma"]
+                layer.beta = entry["beta"]
+                layer.running_mean = entry["running_mean"]
+                layer.running_var = entry["running_var"]
+
+            elif layer_type == "Dropout":
+                layer = Dropout(rate=entry["rate"])
+
+            elif layer_type in ACTIVATION_MAP:
+                layer = ACTIVATION_MAP[layer_type]()
+
+            else:
+                raise ValueError(f"Unknown layer type: {layer_type}")
 
             layers.append(layer)
 
         model = NeuralNetwork(layers)
-
         model.lr = data["lr"].item()
         model.lambda_ = data["lambda_"].item()
         model.beta1 = data["beta1"].item()
         model.beta2 = data["beta2"].item()
         model.loss_type = data["loss_type"].item()
         model.optimizer = data["optimizer"].item()
+        model.num_classes = data["num_classes"].item()
 
         return model
 
 
-    # Prints a summary of the neural network architecture
     def summary(self):
-
-        print("=" * 50)
+        print("=" * 55)
         print("Model Summary")
-        print("=" * 50)
+        print("=" * 55)
 
         total_params = 0
 
         for i, layer in enumerate(self.layers):
-            if layer.W is None:
-                print(f"Layer {i+1} not built yet.")
-                continue
+            layer_type = type(layer).__name__
 
-            in_units = layer.in_size
-            out_units = layer.out_size
+            if isinstance(layer, Dense):
+                params = layer.W.size + layer.b.size if layer.W is not None else 0
+                total_params += params
+                built = f"{layer.in_size} → {layer.out_size}"
+                print(f"[{i+1}] Dense          {built:<20} params: {params}")
 
-            params = layer.W.size + layer.b.size
-            total_params += params
+            elif isinstance(layer, BatchNorm):
+                params = layer.gamma.size + layer.beta.size if layer.gamma is not None else 0
+                total_params += params
+                print(f"[{i+1}] BatchNorm      momentum={layer.momentum:<13} params: {params}")
 
-            print(f"Layer {i+1}")
-            print(f"  Input units:  {in_units}")
-            print(f"  Output units: {out_units}")
-            print(f"  Parameters:   {params}")
-            print("-" * 50)
+            elif isinstance(layer, Dropout):
+                print(f"[{i+1}] Dropout        rate={layer.rate}")
 
-        print(f"Total parameters: {total_params}")
-        print("=" * 50)
-    """
+            elif isinstance(layer, Activation):
+                print(f"[{i+1}] {layer_type:<15}")
+
+            print("-" * 55)
+
+        print(f"Total trainable parameters: {total_params}")
+        print("=" * 55)
 
 
     # One hot encoding for y_true - convert format into a matrix for calculations
