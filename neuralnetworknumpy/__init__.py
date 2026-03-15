@@ -1,5 +1,5 @@
 """
-NeuralNetworkFromScratch
+neuralnetworknumpy
 A minimal deep learning framework built using NumPy.
 """
 
@@ -17,6 +17,8 @@ from .layers import (
     Tanh,
     BatchNorm,
     Dropout,
+    Conv2D,
+    Flatten,
 )
 
 # Model
@@ -47,6 +49,8 @@ __all__ = [
     "Tanh",
     "BatchNorm",
     "Dropout",
+    "Conv2D",
+    "Flatten",
 
     # Utilities
     "History",

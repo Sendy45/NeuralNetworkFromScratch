@@ -224,8 +224,8 @@ class NeuralNetwork:
         # L2 regularization term: (λ / 2m) * sum(||W||^2)
         reg_loss = 0.0
         for layer in self.layers:
-          if not isinstance(layer, (Dropout, Activation, BatchNorm)):
-            reg_loss += np.sum(layer.W ** 2)
+            if hasattr(layer, 'W') and layer.W is not None:
+                reg_loss += np.sum(layer.W ** 2)
 
         reg_loss = (self.lambda_ / (2 * m)) * reg_loss
 
@@ -322,13 +322,12 @@ class NeuralNetwork:
       else:  # Multi-class (softmax)
           return np.argmax(output, axis=0)
 
-
     @staticmethod
     def shuffle_data(x, y):
-      perm = np.random.permutation(y.size)
-      x = x[:, perm]
-      y = y[perm]
-      return x, y
+        perm = np.random.permutation(y.size)
+        x = x[perm] if x.ndim > 2 else x[:, perm]
+        y = y[perm]
+        return x, y
 
     @staticmethod
     def set_seed(seed):
@@ -407,15 +406,17 @@ class NeuralNetwork:
 
         x_shuffled, y_shuffled = NeuralNetwork.shuffle_data(X, y)
 
+        n_samples = X.shape[0] if X.ndim > 2 else X.shape[1]
+
         # Batches
         # tqdm - loading animation
-        for i in tqdm(range(0, x_shuffled.shape[1], batch_size)):
+        for i in tqdm(range(0, n_samples, batch_size)):
 
           optimizer_t += 1
 
           # get batch
-          x_batch = x_shuffled[:, i:i+batch_size]
-          y_batch = y_shuffled[i:i+batch_size]
+          x_batch = x_shuffled[i:i + batch_size] if X.ndim > 2 else x_shuffled[:, i:i + batch_size]
+          y_batch = y_shuffled[i:i + batch_size]
           # feed model
           self._forward(x_batch)
           self._backward(y_batch)
@@ -425,7 +426,7 @@ class NeuralNetwork:
           # Monitor loss - epoch_loss = Avg(batches_loss)
           predictions.append(self._decode_output(y_pred))
           batch_loss = self._compute_loss(y_pred, y_batch)
-          epoch_loss += batch_loss * x_batch.shape[1] / X.shape[1]
+          epoch_loss += batch_loss * n_samples / X.shape[1]
 
           # Check Gradient - make sure backpropagation works well
           #self.check_gradient(x_batch, y_batch)
@@ -474,8 +475,8 @@ class NeuralNetwork:
 
     # Train the model
     def fit(self, X, y, X_val=None, y_val=None, epochs=10, batch_size=1):
-        if X.shape[1] != y.size:
-            raise ValueError("Mismatch between samples and labels")
+        """if X.shape[1] != y.size:
+            raise ValueError("Mismatch between samples and labels")"""
 
         # Find last layer - last outsize is num classes
         for layer in reversed(self.layers):

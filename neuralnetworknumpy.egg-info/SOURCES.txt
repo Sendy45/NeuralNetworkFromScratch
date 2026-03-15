@@ -1,9 +1,9 @@
 README.md
 pyproject.toml
-NeuralNetworkFromScratch/__init__.py
-NeuralNetworkFromScratch/layers.py
-NeuralNetworkFromScratch/model.py
-NeuralNetworkFromScratch/utils.py
+neuralnetworknumpy/__init__.py
+neuralnetworknumpy/layers.py
+neuralnetworknumpy/model.py
+neuralnetworknumpy/utils.py
 neuralnetworknumpy.egg-info/PKG-INFO
 neuralnetworknumpy.egg-info/SOURCES.txt
 neuralnetworknumpy.egg-info/dependency_links.txt

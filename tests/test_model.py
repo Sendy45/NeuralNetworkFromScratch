@@ -4,7 +4,7 @@ from keras.datasets import mnist
 import numpy as np
 import plt
 
-from NeuralNetworkFromScratch import NeuralNetwork, Dense, ReLu, BatchNorm, Dropout, Softmax, Scaler, \
+from neuralnetworknumpy import NeuralNetwork, Dense, ReLu, BatchNorm, Dropout, Softmax, Scaler, \
     split_train_validation
 
 model = NeuralNetwork([

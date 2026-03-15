@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: neuralnetworknumpy
-Version: 0.1.1
+Version: 0.1.3
 Summary: A neural network framework built completely from scratch using NumPy
 Author: Itamar Senderovitz
 License: MIT
@@ -50,7 +50,7 @@ Or install from source:
 
 ```bash
 git clone https://github.com/Sendy45/NeuralNetworkFromScratch.git
-cd NeuralNetworkFromScratch
+cd neuralnetworknumpy
 pip install .
 ```
 
@@ -62,7 +62,7 @@ pip install .
 import numpy as np
 from keras.datasets import mnist
 
-from NeuralNetworkFromScratch import (
+from neuralnetworknumpy import (
     NeuralNetwork,
     Dense,
     ReLu,

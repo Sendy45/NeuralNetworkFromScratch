@@ -2,7 +2,7 @@
 import matplotlib.pyplot as plt
 from keras.datasets import mnist
 
-from NeuralNetworkFromScratch import NeuralNetwork, Scaler
+from neuralnetworknumpy import NeuralNetwork, Scaler
 
 # ----------------------------
 

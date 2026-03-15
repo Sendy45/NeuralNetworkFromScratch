@@ -31,7 +31,7 @@ Or install from source:
 
 ```bash
 git clone https://github.com/Sendy45/NeuralNetworkFromScratch.git
-cd NeuralNetworkFromScratch
+cd neuralnetworknumpy
 pip install .
 ```
 
@@ -43,7 +43,7 @@ pip install .
 import numpy as np
 from keras.datasets import mnist
 
-from NeuralNetworkFromScratch import (
+from neuralnetworknumpy import (
     NeuralNetwork,
     Dense,
     ReLu,
