@@ -6,7 +6,7 @@ Run from your project root where the layers are importable.
 import numpy as np
 from tensorflow.keras.datasets import mnist
 
-from neuralnetworknumpy import Conv2D, Flatten, Dense, ReLu, Softmax, MaxPooling2D
+from neuralnetworknumpy import Conv2D, Flatten, Dense, ReLu, Softmax, MaxPooling2D, AveragePooling2D
 from neuralnetworknumpy import NeuralNetwork
 
 # Load & prep data
@@ -20,7 +20,7 @@ y_test = y_test[:1000]
 model = NeuralNetwork([
     Conv2D(4,  (3,3), padding="valid"),
     ReLu(),
-    MaxPooling2D((2,2)),
+    AveragePooling2D((2,2)),
     Flatten(),
     Dense(128),
     ReLu(),

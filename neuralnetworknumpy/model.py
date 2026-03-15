@@ -2,7 +2,7 @@ import numpy as np
 from tqdm.auto import tqdm
 
 from . import Flatten
-from .layers import Dropout, Activation, BatchNorm, Dense, Conv2D, MaxPooling2D
+from .layers import Dropout, Activation, BatchNorm, Dense, Conv2D, MaxPooling2D, AveragePooling2D
 from .utils import History
 
 class NeuralNetwork:
@@ -56,7 +56,7 @@ class NeuralNetwork:
                     "in_size": layer.in_size,
                     "out_size": layer.out_size,
                 })
-            elif isinstance(layer, MaxPooling2D):
+            elif isinstance(layer, (MaxPooling2D, AveragePooling2D)):
                 entry.update({
                     "pool_size": layer.pool_size,
                     "strides": layer.strides,
@@ -142,6 +142,12 @@ class NeuralNetwork:
                 layer.padding = entry["padding"]
                 layer._padding_val = entry["_padding_val"]
 
+            elif layer_type == "AveragePooling2D":
+                layer = AveragePooling2D(pool_size=entry["pool_size"])
+                layer.strides = entry["strides"]
+                layer.padding = entry["padding"]
+                layer._padding_val = entry["_padding_val"]
+
             elif layer_type == "Flatten":
                 layer = Flatten()
 
@@ -211,6 +217,12 @@ class NeuralNetwork:
 
                 print(f"[{i + 1}] MaxPooling2D   pool=({p_h},{p_w}( stride=({s_h},{s_w})")
 
+            elif isinstance(layer, AveragePooling2D):
+
+                p_h, p_w = layer.pool_size
+                s_h, s_w = layer.strides
+
+                print(f"[{i + 1}] AveragePooling2D   pool=({p_h},{p_w}( stride=({s_h},{s_w})")
 
             else:
                 print(f"[{i+1}] {layer_type:<15}")
@@ -500,7 +512,7 @@ class NeuralNetwork:
 
         predictions = np.concatenate(predictions)
 
-        history.add("epoch", ep)
+        history.add("epoch", ep+1)
         history.add("loss", epoch_loss)
         history = self.calc_metrics(history, predictions, y_shuffled, metrics=["accuracy", "precision", "recall"])
 

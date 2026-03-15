@@ -20,6 +20,7 @@ from .layers import (
     Conv2D,
     Flatten,
     MaxPooling2D,
+    AveragePooling2D,
 )
 
 # Model
@@ -53,6 +54,7 @@ __all__ = [
     "Conv2D",
     "Flatten",
     "MaxPooling2D",
+    "AveragePooling2D",
 
     # Utilities
     "History",
