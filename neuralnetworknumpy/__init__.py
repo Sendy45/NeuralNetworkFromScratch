@@ -19,6 +19,7 @@ from .layers import (
     Dropout,
     Conv2D,
     Flatten,
+    MaxPooling2D,
 )
 
 # Model
@@ -51,6 +52,7 @@ __all__ = [
     "Dropout",
     "Conv2D",
     "Flatten",
+    "MaxPooling2D",
 
     # Utilities
     "History",

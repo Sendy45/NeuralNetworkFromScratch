@@ -1,7 +1,8 @@
 import numpy as np
 from tqdm.auto import tqdm
 
-from .layers import Dropout, Activation, BatchNorm, Dense
+from . import Flatten
+from .layers import Dropout, Activation, BatchNorm, Dense, Conv2D, MaxPooling2D
 from .utils import History
 
 class NeuralNetwork:
@@ -42,8 +43,28 @@ class NeuralNetwork:
                 })
             elif isinstance(layer, Dropout):
                 entry["rate"] = layer.rate
+            elif isinstance(layer, Conv2D):
+                entry.update({
+                    "W": layer.W,
+                    "b": layer.b,
+                    "initializer": layer.initializer,
+                    "filters": layer.filters,
+                    "kernel_size": layer.kernel_size,
+                    "padding": layer.padding,
+                    "_padding_val": layer._padding_val,
+                    "strides": layer.strides,
+                    "in_size": layer.in_size,
+                    "out_size": layer.out_size,
+                })
+            elif isinstance(layer, MaxPooling2D):
+                entry.update({
+                    "pool_size": layer.pool_size,
+                    "strides": layer.strides,
+                    "padding": layer.padding,
+                    "_padding_val": layer._padding_val,
+                })
 
-            # Activation layers (ReLu, Sigmoid, etc.) need no extra data
+            # Activation layers (ReLu, Sigmoid, etc.) and Flatten layer need no extra data
 
             layer_data.append(entry)
 
@@ -101,6 +122,29 @@ class NeuralNetwork:
             elif layer_type == "Dropout":
                 layer = Dropout(rate=entry["rate"])
 
+            elif layer_type == "Conv2D":
+                layer = Conv2D(filters=entry["filters"],
+                kernel_size=entry["kernel_size"])
+                layer.W = entry["W"]
+                layer.b = entry["b"]
+                layer.in_size = entry["in_size"]
+                layer.out_size = entry["out_size"]
+                layer.initializer = entry["initializer"]
+                layer.filters = entry["filters"]
+                layer.kernel_size = entry["kernel_size"]
+                layer.padding = entry["padding"]
+                layer._padding_val = entry["_padding_val"]
+                layer.strides = entry["strides"]
+
+            elif layer_type == "MaxPooling2D":
+                layer = MaxPooling2D(pool_size=entry["pool_size"])
+                layer.strides = entry["strides"]
+                layer.padding = entry["padding"]
+                layer._padding_val = entry["_padding_val"]
+
+            elif layer_type == "Flatten":
+                layer = Flatten()
+
             elif layer_type in ACTIVATION_MAP:
                 layer = ACTIVATION_MAP[layer_type]()
 
@@ -122,9 +166,10 @@ class NeuralNetwork:
 
 
     def summary(self):
-        print("=" * 55)
+        ll = 60 # Line Length
+        print("=" * ll)
         print("Model Summary")
-        print("=" * 55)
+        print("=" * ll)
 
         total_params = 0
 
@@ -145,13 +190,35 @@ class NeuralNetwork:
             elif isinstance(layer, Dropout):
                 print(f"[{i+1}] Dropout        rate={layer.rate}")
 
-            elif isinstance(layer, Activation):
+
+            elif isinstance(layer, Conv2D):
+
+                params = layer.W.size + layer.b.size if layer.W is not None else 0
+                total_params += params
+
+                k_h, k_w = layer.kernel_size
+                s_h, s_w = layer.strides
+
+                built = f"{layer.filters} filters {k_h}x{k_w}"
+
+                print(f"[{i + 1}] Conv2D         {built} stride=({s_h},{s_w}) params: {params}")
+
+
+            elif isinstance(layer, MaxPooling2D):
+
+                p_h, p_w = layer.pool_size
+                s_h, s_w = layer.strides
+
+                print(f"[{i + 1}] MaxPooling2D   pool=({p_h},{p_w}( stride=({s_h},{s_w})")
+
+
+            else:
                 print(f"[{i+1}] {layer_type:<15}")
 
-            print("-" * 55)
+            print("-" * ll)
 
         print(f"Total trainable parameters: {total_params}")
-        print("=" * 55)
+        print("=" * ll)
 
 
     # One hot encoding for y_true - convert format into a matrix for calculations

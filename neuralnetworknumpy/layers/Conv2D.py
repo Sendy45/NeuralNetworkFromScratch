@@ -5,11 +5,14 @@ import numpy as np
 class Conv2D(Layer):
     def __init__(self, filters, kernel_size, strides=(1, 1), padding="valid"):
         super().__init__()
+        self.in_size = None
         self.filters = filters
         self.kernel_size = kernel_size if isinstance(kernel_size, tuple) else (kernel_size, kernel_size)
         self.strides = strides
         self.padding = padding
         self.out_size = filters
+
+        self.initializer = None
 
         self._padding_val = None  # resolved (P_h, P_w) after build
 
@@ -18,12 +21,12 @@ class Conv2D(Layer):
         self.in_size = input_size
         K_h, K_w = self.kernel_size
 
-        # He initialization — matches Dense default
+        # He initialization - matches Dense default
         std = np.sqrt(2.0 / (K_h * K_w * input_size))
         self.W = np.random.randn(self.filters, K_h, K_w, input_size).astype(np.float32) * std
         self.b = np.zeros((self.filters, 1), dtype=np.float32)
 
-        # Optimizer states — same pattern as Dense
+        # Optimizer states - same pattern as Dense
         self.mW = np.zeros_like(self.W)
         self.mb = np.zeros_like(self.b)
         self.vW = np.zeros_like(self.W)
@@ -35,7 +38,7 @@ class Conv2D(Layer):
             self._padding_val = (0, 0)
 
     def _forward(self, A_prev, training=None):
-        # A_prev shape: (m, H, W, C_in)  ← row-major, as Conv2D expects
+        # A_prev shape: (m, H, W, C_in) - row-major, as Conv2D expects
         # Build layer if it's its first run
         if self.W is None:
             self.build(A_prev.shape[-1])
@@ -125,7 +128,7 @@ class Conv2D(Layer):
         # dA = dZ * W
         W_col = self.W.reshape(self.filters, -1)
         # dZ_col shape: (m*H_out*W_out, filters)
-        # (m*H_out*W_out, filters) @ (filters, K_h*K_w*C_in) → (m*H_out*W_out, K_h*K_w*C_in)
+        # (m*H_out*W_out, filters) @ (filters, K_h*K_w*C_in) -> (m*H_out*W_out, K_h*K_w*C_in)
         dcols = (dZ_col @ W_col).reshape(self.m, H_out, W_out, K_h, K_w, -1)
 
         # Pure math based approach, O(n^2), not optimized at all
