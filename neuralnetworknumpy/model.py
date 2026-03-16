@@ -237,7 +237,7 @@ class NeuralNetwork:
     def _one_hot_encoding(self, y):
         one_hot_y = np.zeros((y.size, self.num_classes))
         one_hot_y[np.arange(y.size), y] = 1
-        return one_hot_y.T
+        return one_hot_y
 
     """ **********************************************************
     Model Algorithms
@@ -396,10 +396,10 @@ class NeuralNetwork:
     # Converts final layer activation to predicted class labels
     @staticmethod
     def _decode_output(output):
-      if output.shape[0] == 1:  # Binary classification
+      if output.shape[1] == 1:  # Binary classification
           return (output > 0.5).astype(int).flatten()
       else:  # Multi-class (softmax)
-          return np.argmax(output, axis=0)
+          return np.argmax(output, axis=1)
 
     @staticmethod
     def shuffle_data(x, y):
@@ -485,7 +485,7 @@ class NeuralNetwork:
 
         x_shuffled, y_shuffled = NeuralNetwork.shuffle_data(X, y)
 
-        n_samples = X.shape[0] if X.ndim > 2 else X.shape[1]
+        n_samples = X.shape[0]
 
         # Batches
         # tqdm - loading animation

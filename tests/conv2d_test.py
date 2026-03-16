@@ -4,32 +4,36 @@ Run from your project root where the layers are importable.
 """
 
 import numpy as np
-from tensorflow.keras.datasets import mnist
+from tensorflow.keras.datasets import fashion_mnist
 
-from neuralnetworknumpy import Conv2D, Flatten, Dense, ReLu, Softmax, MaxPooling2D, AveragePooling2D
+from neuralnetworknumpy import Conv2D, Flatten, Dense, ReLu, Softmax, MaxPooling2D, AveragePooling2D, \
+    GlobalAveragePooling2D
 from neuralnetworknumpy import NeuralNetwork
 
 # Load & prep data
-(x_train, y_train), (x_test, y_test) = mnist.load_data()
+(x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
 x_train = (x_train[:10000].astype(np.float32) / 255.0)[..., np.newaxis]  # (5000, 28, 28, 1)
 y_train = y_train[:10000]  # you forgot this line
 
 x_test  = (x_test[:1000].astype(np.float32)  / 255.0)[..., np.newaxis]
 y_test = y_test[:1000]
 
+print('x_train shape:', x_train.shape)
+
 model = NeuralNetwork([
-    Conv2D(4,  (3,3), padding="valid"),
+    Conv2D(8, (3, 3), padding="valid"),
     ReLu(),
-    AveragePooling2D((2,2)),
+    MaxPooling2D((4, 4)),
+    Conv2D(4, (2, 2), padding="valid"),
+    ReLu(),
+    AveragePooling2D((3, 3)),
     Flatten(),
-    Dense(128),
-    ReLu(),
     Dense(10),
     Softmax(),
 ])
 
-model.compile(optimizer="adam", lr=0.001)
-model.fit(x_train, y_train, epochs=2, batch_size=256)
+model.compile(optimizer="adam", lr=0.01)
+model.fit(x_train, y_train, epochs=5, batch_size=256)
 
 acc = model.evaluate(x_test, y_test[:1000])
 print(f"Test accuracy: {acc:.2%}")
@@ -41,5 +45,5 @@ model.save("conv2d_model.h5")
 
 model_loaded = NeuralNetwork.load("conv2d_model.h5.npz")
 
-acc = model_loaded.evaluate(x_test, y_test[:1000])
+acc = model_loaded.evaluate(x_test, y_test)
 print(f"Test accuracy: {acc:.2%}")

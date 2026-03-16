@@ -1,0 +1,33 @@
+from .Layer import Layer
+import numpy as np
+
+# Good large number of channels, not recommended for low number of channels
+class GlobalAveragePooling2D(Layer):
+    def __init__(self):
+        super().__init__()
+
+    def _forward(self, A_prev, training=None):
+
+        self.A_prev = A_prev
+
+        # Operates the mean on the height and width dimensionalities for all the channels
+        self.Z = np.mean(A_prev, axis=(1,2))
+
+        self.A = self.Z  # needed by NeuralNetwork._compute_loss reg term
+        return self.Z
+
+    def _backward(self, dA, skip_activation=False):
+
+        # Output shape
+        m, H, W, C = self.A_prev.shape
+
+        # Broadcast dA to A shape and fill with the partial derivative of 1/(H*W)
+        # ∂Z/∂A_prev = 1/(H*W)
+        dA_prev = np.broadcast_to(dA[:, None, None, :], (m, H, W, C)).copy()
+        dA_prev /= (H * W)
+
+        return dA_prev
+
+
+    def _update(self, *args, **kwargs):
+        pass

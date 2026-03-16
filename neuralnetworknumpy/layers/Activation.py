@@ -32,13 +32,13 @@ class Softmax(Activation):
 
   def _forward(self, Z, training=None):
       self.Z = Z
-      shifted = Z - np.max(Z, axis=0, keepdims=True)
+      shifted = Z - np.max(Z, axis=1, keepdims=True)
       exp_vals = np.exp(shifted)
-      self.A = exp_vals / np.sum(exp_vals, axis=0, keepdims=True)
+      self.A = exp_vals / np.sum(exp_vals, axis=1, keepdims=True)
       return self.A
 
   def _backward(self, dA):
-      s = np.sum(dA * self.A, axis=0, keepdims=True)
+      s = np.sum(dA * self.A, axis=1, keepdims=True)
       return self.A * (dA - s)
 
 class Linear(Activation):

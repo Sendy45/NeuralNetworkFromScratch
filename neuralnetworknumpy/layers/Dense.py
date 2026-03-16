@@ -28,7 +28,7 @@ class Dense(Layer):
       self.in_size = input_size
       self._initialize_weights()
 
-      self.b = np.zeros((self.out_size, 1), dtype=np.float32)
+      self.b = np.zeros((1, self.out_size), dtype=np.float32)
 
       # Optimizer state
       self.vW = np.zeros_like(self.W).astype(np.float32)
@@ -41,22 +41,22 @@ class Dense(Layer):
       if self.initializer == "he":
           # W ~ N(0, √(2/in))
           std = np.sqrt(2.0 / self.in_size)
-          self.W = np.random.randn(self.out_size, self.in_size).astype(np.float32) * std
+          self.W = np.random.randn(self.in_size, self.out_size).astype(np.float32) * std
 
       elif self.initializer == "xavier":
           # U(-√(6/(in+out)),√(6/(in+out)))
           limit = np.sqrt(6.0 / (self.in_size + self.out_size))
-          self.W = np.random.uniform(-limit, limit, (self.out_size, self.in_size)).astype(np.float32)
+          self.W = np.random.uniform(-limit, limit, (self.in_size, self.out_size)).astype(np.float32)
 
       else:
-          self.W = np.random.randn(self.out_size, self.in_size).astype(np.float32) * 0.01
+          self.W = np.random.randn(self.in_size, self.out_size).astype(np.float32) * 0.01
 
   def _forward(self, A_prev, training=None):
       if self.W is None:
-          self.build(A_prev.shape[0])
+          self.build(A_prev.shape[1])
 
       self.A_prev = A_prev
-      self.Z = np.dot(self.W, A_prev) + self.b
+      self.Z = A_prev @ self.W + self.b
       self.A = self.Z
 
       return self.Z
@@ -65,15 +65,15 @@ class Dense(Layer):
 
       # dW_i = dZ_i · A_{i}^T
       # Gradient of the loss w.r.t. weights of layer i
-      self.dW = np.dot(dA, self.A_prev.T)
+      self.dW = self.A_prev.T @ dA
 
       # dB_i = sum(dZ_i) over the batch
       # Gradient of the loss w.r.t. biases of layer i
-      self.db = np.sum(dA, axis=1, keepdims=True)
+      self.db = np.sum(dA, axis=0, keepdims=True)
 
       # Gradient to pass backward
       # dA_prev_i = W_i · dA_i
-      return np.dot(self.W.T, dA)
+      return dA @ self.W.T
 
 
   def _update(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
@@ -82,7 +82,7 @@ class Dense(Layer):
           dw = self.dW # pure gradient
       else:
           # Get batch size from the last dZ calculation to scale regularization
-          m = self.A.shape[1]
+          m = self.A.shape[0]
           dw = self.dW + (lambda_ / m) * self.W # L2 regularization
 
       if optimizer == "momentum":
