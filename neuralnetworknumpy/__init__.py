@@ -3,7 +3,7 @@ neuralnetworknumpy
 A minimal deep learning framework built using NumPy.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 # Layers
 from .layers import (
@@ -20,7 +20,11 @@ from .layers import (
     Conv2D,
     Flatten,
     MaxPooling2D,
-    AveragePooling2D, GlobalAveragePooling2D,
+    AveragePooling2D,
+    GlobalAveragePooling2D,
+    DepthwiseConv2D,
+    DepthwiseSeparableConv2D,
+    SpatiallySeparableConv2D,
 )
 
 # Model
@@ -41,7 +45,7 @@ __all__ = [
     # Base
     "Layer",
 
-    # Layers
+    # 1D Layers
     "Dense",
     "Activation",
     "ReLu",
@@ -51,11 +55,16 @@ __all__ = [
     "Tanh",
     "BatchNorm",
     "Dropout",
+
+    # 2D Layers
     "Conv2D",
     "Flatten",
     "MaxPooling2D",
     "AveragePooling2D",
     "GlobalAveragePooling2D",
+    "DepthwiseConv2D",
+    "DepthwiseSeparableConv2D",
+    "SpatiallySeparableConv2D",
 
     # Utilities
     "History",

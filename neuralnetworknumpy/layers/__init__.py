@@ -4,6 +4,9 @@ from .Flatten import Flatten
 from .MaxPooling2D import MaxPooling2D
 from .AveragePooling2D import AveragePooling2D
 from .GlobalAveragePooling2D import GlobalAveragePooling2D
+from .DepthwiseConv2D import DepthwiseConv2D
+from .DepthwiseSeparableConv2D import DepthwiseSeparableConv2D
+from .SpatiallySeparableConv2D import SpatiallySeparableConv2D
 from .Dense import Dense
 from .Dropout import Dropout
 from .BatchNorm import BatchNorm
@@ -16,6 +19,9 @@ __ALL__ = [
     MaxPooling2D,
     AveragePooling2D,
     GlobalAveragePooling2D,
+    DepthwiseConv2D,
+    DepthwiseSeparableConv2D,
+    SpatiallySeparableConv2D,
     Dense,
     Dropout,
     BatchNorm,

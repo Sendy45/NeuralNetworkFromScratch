@@ -3,7 +3,7 @@ import numpy as np
 
 
 class Conv2D(Layer):
-    def __init__(self, filters, kernel_size, strides=(1, 1), padding="valid"):
+    def __init__(self, filters, kernel_size, strides:tuple=(1, 1), padding:str="valid", kernel_initializer: str=None):
         super().__init__()
         self.in_size = None
         self.filters = filters
@@ -12,7 +12,10 @@ class Conv2D(Layer):
         self.padding = padding
         self.out_size = filters
 
-        self.initializer = None
+        self.kernel_initializer = kernel_initializer
+
+        if not kernel_initializer:
+            self.kernel_initializer = "he"
 
         self._padding_val = None  # resolved (P_h, P_w) after build
 
@@ -21,9 +24,7 @@ class Conv2D(Layer):
         self.in_size = input_size
         K_h, K_w = self.kernel_size
 
-        # He initialization - matches Dense default
-        std = np.sqrt(2.0 / (K_h * K_w * input_size))
-        self.W = np.random.randn(self.filters, K_h, K_w, input_size).astype(np.float32) * std
+        self._initialize_weights()
         self.b = np.zeros((self.filters, 1), dtype=np.float32)
 
         # Optimizer states - same pattern as Dense
@@ -36,6 +37,28 @@ class Conv2D(Layer):
             self._padding_val = ((K_h - 1) // 2, (K_w - 1) // 2)
         else:  # "valid"
             self._padding_val = (0, 0)
+
+    def _initialize_weights(self):
+
+        K_h, K_w = self.kernel_size
+        C_in = self.in_size
+        C_out = self.filters
+
+        fan_in = C_in * K_h * K_w
+        fan_out = C_out * K_h * K_w
+
+        if self.kernel_initializer == "he":
+            # W ~ N(0, √(2/in))
+            std = np.sqrt(2.0 / fan_in)
+            self.W = np.random.randn(C_out, K_h, K_w, C_in).astype(np.float32) * std
+
+        elif self.kernel_initializer == "xavier":
+            # U(-√(6/(in+out)),√(6/(in+out)))
+            limit = np.sqrt(6.0 / (fan_in + fan_out))
+            self.W = np.random.uniform(-limit, limit, (C_out, K_h, K_w, C_in)).astype(np.float32)
+
+        else:
+            self.W = np.random.randn(C_out, K_h, K_w, C_in).astype(np.float32) * 0.01
 
     def _forward(self, A_prev, training=None):
         # A_prev shape: (m, H, W, C_in) - row-major, as Conv2D expects

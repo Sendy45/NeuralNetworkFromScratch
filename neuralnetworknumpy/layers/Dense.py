@@ -16,7 +16,7 @@ class Dense(Layer):
 
 
   def _set_default_initializers(self):
-      self.initializer = "he"
+      self.kernel_initializer = "he"
       """if self.activation == "relu":
           self.initializer = "he"
       elif self.activation in ["sigmoid", "tanh", "softmax", "linear"]:
@@ -38,12 +38,12 @@ class Dense(Layer):
 
   def _initialize_weights(self):
 
-      if self.initializer == "he":
+      if self.kernel_initializer == "he":
           # W ~ N(0, √(2/in))
           std = np.sqrt(2.0 / self.in_size)
           self.W = np.random.randn(self.in_size, self.out_size).astype(np.float32) * std
 
-      elif self.initializer == "xavier":
+      elif self.kernel_initializer == "xavier":
           # U(-√(6/(in+out)),√(6/(in+out)))
           limit = np.sqrt(6.0 / (self.in_size + self.out_size))
           self.W = np.random.uniform(-limit, limit, (self.in_size, self.out_size)).astype(np.float32)

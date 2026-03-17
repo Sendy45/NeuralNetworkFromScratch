@@ -7,7 +7,7 @@ import numpy as np
 from tensorflow.keras.datasets import fashion_mnist
 
 from neuralnetworknumpy import Conv2D, Flatten, Dense, ReLu, Softmax, MaxPooling2D, AveragePooling2D, \
-    GlobalAveragePooling2D
+    GlobalAveragePooling2D, DepthwiseSeparableConv2D
 from neuralnetworknumpy import NeuralNetwork
 
 # Load & prep data
@@ -24,7 +24,7 @@ model = NeuralNetwork([
     Conv2D(8, (3, 3), padding="valid"),
     ReLu(),
     MaxPooling2D((4, 4)),
-    Conv2D(4, (2, 2), padding="valid"),
+    DepthwiseSeparableConv2D(4, (2, 2), padding="valid"),
     ReLu(),
     AveragePooling2D((3, 3)),
     Flatten(),
@@ -33,7 +33,7 @@ model = NeuralNetwork([
 ])
 
 model.compile(optimizer="adam", lr=0.01)
-model.fit(x_train, y_train, epochs=5, batch_size=256)
+model.fit(x_train, y_train, epochs=2, batch_size=256)
 
 acc = model.evaluate(x_test, y_test[:1000])
 print(f"Test accuracy: {acc:.2%}")

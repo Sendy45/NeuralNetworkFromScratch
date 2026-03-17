@@ -1,7 +1,7 @@
 import numpy as np
 from tqdm.auto import tqdm
 
-from . import Flatten
+from . import Flatten, GlobalAveragePooling2D, DepthwiseConv2D, DepthwiseSeparableConv2D
 from .layers import Dropout, Activation, BatchNorm, Dense, Conv2D, MaxPooling2D, AveragePooling2D
 from .utils import History
 
@@ -43,6 +43,7 @@ class NeuralNetwork:
                 })
             elif isinstance(layer, Dropout):
                 entry["rate"] = layer.rate
+
             elif isinstance(layer, Conv2D):
                 entry.update({
                     "W": layer.W,
@@ -62,6 +63,25 @@ class NeuralNetwork:
                     "strides": layer.strides,
                     "padding": layer.padding,
                     "_padding_val": layer._padding_val,
+                })
+
+            elif isinstance(layer, DepthwiseConv2D):
+                entry.update({
+                    "W": layer.W,
+                    "b": layer.b,
+                    "in_size": layer.in_size,
+                    "kernel_size": layer.kernel_size,
+                    "padding": layer.padding,
+                    "_padding_val": layer._padding_val,
+                    "strides": layer.strides,
+
+                })
+            elif isinstance(layer, DepthwiseSeparableConv2D):
+                entry.update({
+                    "filters": layer.pointwise.filters,
+                    "kernel_size": layer.depthwise.kernel_size,
+                    "depthwise": layer.depthwise,
+                    "pointwise": layer.pointwise,
                 })
 
             # Activation layers (ReLu, Sigmoid, etc.) and Flatten layer need no extra data
@@ -148,6 +168,26 @@ class NeuralNetwork:
                 layer.padding = entry["padding"]
                 layer._padding_val = entry["_padding_val"]
 
+            elif layer_type == "GlobalAveragePooling2D":
+                layer = GlobalAveragePooling2D()
+
+            elif layer_type == "DepthwiseConv2D":
+                layer = DepthwiseConv2D(kernel_size=entry["kernel_size"])
+                layer.W = entry["W"]
+                layer.b = entry["b"]
+                layer.in_size = entry["in_size"]
+                layer.filters = entry["filters"]
+                layer.kernel_size = entry["kernel_size"]
+                layer.padding = entry["padding"]
+                layer._padding_val = entry["_padding_val"]
+                layer.strides = entry["strides"]
+
+            elif layer_type == "DepthwiseSeparableConv2D":
+                layer = DepthwiseSeparableConv2D(filters=entry["filters"], kernel_size=entry["kernel_size"])
+                layer.depthwise =entry["depthwise"]
+                layer.pointwise =entry["pointwise"]
+
+
             elif layer_type == "Flatten":
                 layer = Flatten()
 
@@ -215,14 +255,14 @@ class NeuralNetwork:
                 p_h, p_w = layer.pool_size
                 s_h, s_w = layer.strides
 
-                print(f"[{i + 1}] MaxPooling2D   pool=({p_h},{p_w}( stride=({s_h},{s_w})")
+                print(f"[{i + 1}] MaxPooling2D   pool=({p_h},{p_w}) stride=({s_h},{s_w})")
 
             elif isinstance(layer, AveragePooling2D):
 
                 p_h, p_w = layer.pool_size
                 s_h, s_w = layer.strides
 
-                print(f"[{i + 1}] AveragePooling2D   pool=({p_h},{p_w}( stride=({s_h},{s_w})")
+                print(f"[{i + 1}] AveragePooling2D   pool=({p_h},{p_w}) stride=({s_h},{s_w})")
 
             else:
                 print(f"[{i+1}] {layer_type:<15}")
