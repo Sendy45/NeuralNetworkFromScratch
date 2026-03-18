@@ -7,6 +7,8 @@ from .GlobalAveragePooling2D import GlobalAveragePooling2D
 from .DepthwiseConv2D import DepthwiseConv2D
 from .DepthwiseSeparableConv2D import DepthwiseSeparableConv2D
 from .SpatiallySeparableConv2D import SpatiallySeparableConv2D
+from .ResidualBlock import ResidualBlock
+from .BatchNorm2D import BatchNorm2D
 from .Dense import Dense
 from .Dropout import Dropout
 from .BatchNorm import BatchNorm
@@ -22,6 +24,8 @@ __ALL__ = [
     DepthwiseConv2D,
     DepthwiseSeparableConv2D,
     SpatiallySeparableConv2D,
+    ResidualBlock,
+    BatchNorm2D,
     Dense,
     Dropout,
     BatchNorm,

@@ -7,7 +7,7 @@ import numpy as np
 from tensorflow.keras.datasets import fashion_mnist
 
 from neuralnetworknumpy import Conv2D, Flatten, Dense, ReLu, Softmax, MaxPooling2D, AveragePooling2D, \
-    GlobalAveragePooling2D, DepthwiseSeparableConv2D
+    GlobalAveragePooling2D, DepthwiseSeparableConv2D, ResidualBlock, BatchNorm2D
 from neuralnetworknumpy import NeuralNetwork
 
 # Load & prep data
@@ -20,12 +20,18 @@ y_test = y_test[:1000]
 
 print('x_train shape:', x_train.shape)
 
+block = ResidualBlock(
+    [
+        Conv2D(8, (3, 3),strides=(2,2), padding="same"),
+        BatchNorm2D(),
+        ReLu(),
+        DepthwiseSeparableConv2D(4, (3, 3), padding="same"),
+        ReLu(),
+    ],
+    projection=Conv2D(4, 1, strides=(2,2), padding="same")
+)
 model = NeuralNetwork([
-    Conv2D(8, (3, 3), padding="valid"),
-    ReLu(),
-    MaxPooling2D((4, 4)),
-    DepthwiseSeparableConv2D(4, (2, 2), padding="valid"),
-    ReLu(),
+    block,
     AveragePooling2D((3, 3)),
     Flatten(),
     Dense(10),

@@ -2,7 +2,8 @@ import numpy as np
 from tqdm.auto import tqdm
 
 from . import Flatten, GlobalAveragePooling2D, DepthwiseConv2D, DepthwiseSeparableConv2D
-from .layers import Dropout, Activation, BatchNorm, Dense, Conv2D, MaxPooling2D, AveragePooling2D
+from .layers import Dropout, Activation, BatchNorm, Dense, Conv2D, MaxPooling2D, AveragePooling2D, ResidualBlock, \
+    BatchNorm2D
 from .utils import History
 
 class NeuralNetwork:
@@ -31,9 +32,9 @@ class NeuralNetwork:
                     "b": layer.b,
                     "in_size": layer.in_size,
                     "out_size": layer.out_size,
-                    "initializer": layer.initializer,
+                    "kernel_initializer": layer.kernel_initializer,
                 })
-            elif isinstance(layer, BatchNorm):
+            elif isinstance(layer, (BatchNorm, BatchNorm2D)):
                 entry.update({
                     "gamma": layer.gamma,
                     "beta": layer.beta,
@@ -48,7 +49,7 @@ class NeuralNetwork:
                 entry.update({
                     "W": layer.W,
                     "b": layer.b,
-                    "initializer": layer.initializer,
+                    "kernel_initializer": layer.kernel_initializer,
                     "filters": layer.filters,
                     "kernel_size": layer.kernel_size,
                     "padding": layer.padding,
@@ -82,6 +83,12 @@ class NeuralNetwork:
                     "kernel_size": layer.depthwise.kernel_size,
                     "depthwise": layer.depthwise,
                     "pointwise": layer.pointwise,
+                })
+
+            elif isinstance(layer, ResidualBlock):
+                entry.update({
+                    "layers": layer.layers,
+                    "projection": layer.projection,
                 })
 
             # Activation layers (ReLu, Sigmoid, etc.) and Flatten layer need no extra data
@@ -125,7 +132,7 @@ class NeuralNetwork:
                 layer.b = entry["b"]
                 layer.in_size = entry["in_size"]
                 layer.out_size = entry["out_size"]
-                layer.initializer = entry["initializer"]
+                layer.kernel_initializer = entry["kernel_initializer"]
                 # Restore optimizer states as zeros (not serialized)
                 layer.vW = np.zeros_like(layer.W)
                 layer.vb = np.zeros_like(layer.b)
@@ -149,7 +156,7 @@ class NeuralNetwork:
                 layer.b = entry["b"]
                 layer.in_size = entry["in_size"]
                 layer.out_size = entry["out_size"]
-                layer.initializer = entry["initializer"]
+                layer.kernel_initializer = entry["kernel_initializer"]
                 layer.filters = entry["filters"]
                 layer.kernel_size = entry["kernel_size"]
                 layer.padding = entry["padding"]
@@ -187,6 +194,16 @@ class NeuralNetwork:
                 layer.depthwise =entry["depthwise"]
                 layer.pointwise =entry["pointwise"]
 
+            elif layer_type == "ResidualBlock":
+                layer = ResidualBlock(layers=entry["layers"])
+                layer.projection = entry["projection"]
+
+            elif layer_type == "BatchNorm2D":
+                layer = BatchNorm2D(momentum=entry["momentum"])
+                layer.gamma = entry["gamma"]
+                layer.beta = entry["beta"]
+                layer.running_mean = entry["running_mean"]
+                layer.running_var = entry["running_var"]
 
             elif layer_type == "Flatten":
                 layer = Flatten()

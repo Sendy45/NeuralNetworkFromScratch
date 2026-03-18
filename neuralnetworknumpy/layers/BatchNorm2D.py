@@ -2,7 +2,7 @@ from .Layer import Layer
 import numpy as np
 
 
-class BatchNorm(Layer):
+class BatchNorm2D(Layer):
     def __init__(self, momentum=0.9):
         super().__init__()
         # Momentum for running mean/variance (used during inference)
@@ -21,19 +21,20 @@ class BatchNorm(Layer):
         self.running_var = None
 
     def build(self, input_size):
+        # input_size = C_in
         # Initialize γ to 1 - keeps normalized values unchanged initially (scaling by 1 - unchanged)
-        self.gamma = np.ones((1, input_size), dtype=np.float32)
+        self.gamma = np.ones((1, 1, 1, input_size), dtype=np.float32)
 
         # Initialize β to 0 - no shift initially (shifting by 0 - unchanged)
-        self.beta = np.zeros((1, input_size), dtype=np.float32)
+        self.beta = np.zeros((1, 1, 1, input_size), dtype=np.float32)
 
         # Running mean initialized to 0
-        self.running_mean = np.zeros((1, input_size), dtype=np.float32)
+        self.running_mean = np.zeros((1, 1, 1, input_size), dtype=np.float32)
         # Running variance initialized to 1
-        self.running_var = np.ones((1, input_size), dtype=np.float32)
+        self.running_var = np.ones((1, 1, 1, input_size), dtype=np.float32)
 
     def _forward(self, A_prev, training=True):
-        # A_prev shape: (batch_size, features)
+        # A_prev shape: (batch_size, H, W, channels)
 
         # Lazy initialization (build on first forward pass)
         if self.gamma is None:
@@ -45,10 +46,10 @@ class BatchNorm(Layer):
             # Compute batch statistics
 
             # Mean across batch (per feature)
-            self.mean = np.mean(A_prev, axis=0, keepdims=True)
+            self.mean = np.mean(A_prev, axis=(0, 1, 2), keepdims=True)
 
             # Variance across batch (per feature)
-            self.var = np.var(A_prev, axis=0, keepdims=True)
+            self.var = np.var(A_prev, axis=(0, 1, 2), keepdims=True)
 
             # Normalize
             # X̂ = (X - μB) / √(σB^2 + ε)
@@ -80,16 +81,16 @@ class BatchNorm(Layer):
         return self.A
 
     def _backward(self, dA, skip_activation=False):
-        # dA shape: (batch_size, features)
+        # dA shape: (batch_size, H, W, channels)
         # Gradient of loss w.r.t. output of BatchNorm
 
         m = dA.shape[0]  # batch size
 
         # Scale and Shift derivatives
         # dγ = Σ (dA * X̂)
-        dgamma = np.sum(dA * self.X_hat, axis=0, keepdims=True)
+        dgamma = np.sum(dA * self.X_hat, axis=(0, 1, 2), keepdims=True)
         # dβ = Σ (dA)
-        dbeta = np.sum(dA, axis=0, keepdims=True)
+        dbeta = np.sum(dA, axis=(0, 1, 2), keepdims=True)
 
         # Scaling
         # dX̂ = dA * γ
@@ -102,7 +103,7 @@ class BatchNorm(Layer):
         # Derivative of inverse
         # dvar = Σ (dX̂ * (X - μ) * -0.5 * (σ² + ε)^(-3/2))
         dvar = np.sum(dX_hat * (self.A_prev - self.mean) * -0.5 * var_inv ** 3,
-                      axis=0, keepdims=True)
+                      axis=(0, 1, 2), keepdims=True)
 
         # Mean derivative
         # dmean = Σ (dX̂ * - (σ² + ε)^(1/2)) + dvar * Σ (-2 * (X - μ)) / m
