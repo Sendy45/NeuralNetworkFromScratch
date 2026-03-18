@@ -20,6 +20,8 @@ class BatchNorm2D(Layer):
         self.running_mean = None
         self.running_var = None
 
+        self.std_inv = None
+
     def build(self, input_size):
         # input_size = C_in
         # Initialize γ to 1 - keeps normalized values unchanged initially (scaling by 1 - unchanged)
@@ -49,11 +51,18 @@ class BatchNorm2D(Layer):
             self.mean = np.mean(A_prev, axis=(0, 1, 2), keepdims=True)
 
             # Variance across batch (per feature)
-            self.var = np.var(A_prev, axis=(0, 1, 2), keepdims=True)
+            self.x_mu = A_prev - self.mean  # cached for backward
+            self.var = (self.x_mu * self.x_mu).mean(axis=(0, 1, 2), keepdims=True)
+
+            # Compute inverse std
+            var_inv = 1. / np.sqrt(self.var + self._eps)
+
+            # Reuse in backward pass
+            self.std_inv = var_inv
 
             # Normalize
             # X̂ = (X - μB) / √(σB^2 + ε)
-            self.X_hat = (A_prev - self.mean) / np.sqrt(self.var + self._eps)
+            self.X_hat = (A_prev - self.mean) * var_inv
 
             # Scale and shift
             # A = γ * X̂ + β
@@ -84,7 +93,7 @@ class BatchNorm2D(Layer):
         # dA shape: (batch_size, H, W, channels)
         # Gradient of loss w.r.t. output of BatchNorm
 
-        m = dA.shape[0]  # batch size
+        N = np.prod(dA.shape[:3])  # m * H * W
 
         # Scale and Shift derivatives
         # dγ = Σ (dA * X̂)
@@ -96,34 +105,42 @@ class BatchNorm2D(Layer):
         # dX̂ = dA * γ
         dX_hat = dA * self.gamma
 
-        # Precompute inverse std deviation
-        var_inv = 1. / np.sqrt(self.var + self._eps)
+        # Total derivative
+        # Combine all paths
+        # dX = dX̂ / sqrt(var+eps) + dvar * 2 * (X - μ) / N + dmean / N
+        si2 = self.std_inv * self.std_inv  # std_inv² — avoids ** operator
+        sum1 = np.sum(dX_hat, axis=(0, 1, 2), keepdims=True)
+        sum2 = np.sum(dX_hat * self.x_mu, axis=(0, 1, 2), keepdims=True)
 
-        # Variance derivative
+        dX = (1.0 / N) * self.std_inv * (
+                N * dX_hat - sum1 - self.x_mu * si2 * sum2
+        )
+
+        """# Variance derivative
         # Derivative of inverse
         # dvar = Σ (dX̂ * (X - μ) * -0.5 * (σ² + ε)^(-3/2))
-        dvar = np.sum(dX_hat * (self.A_prev - self.mean) * -0.5 * var_inv ** 3,
+        dvar = np.sum(dX_hat * (self.A_prev - self.mean) * -0.5 * self.var_inv ** 3,
                       axis=(0, 1, 2), keepdims=True)
 
         # Mean derivative
-        # dmean = Σ (dX̂ * - (σ² + ε)^(1/2)) + dvar * Σ (-2 * (X - μ)) / m
+        # dmean = Σ (dX̂ * - (σ² + ε)^(1/2)) + dvar * Σ (-2 * (X - μ)) / N
         dmean = (
-                np.sum(dX_hat * -var_inv, axis=(0, 1, 2), keepdims=True)
-                + dvar * np.sum(-2. * (self.A_prev - self.mean), axis=(0, 1, 2), keepdims=True) / m
+                np.sum(dX_hat * -self.var_inv, axis=(0, 1, 2), keepdims=True)
+                + dvar * np.sum(-2. * (self.A_prev - self.mean), axis=(0, 1, 2), keepdims=True) / N
         )
 
         # Total derivative
         # Combine all paths
-        # dX = dX̂ / sqrt(var+eps) + dvar * 2 * (X - μ) / m + dmean / m
+        # dX = dX̂ / sqrt(var+eps) + dvar * 2 * (X - μ) / N + dmean / N
         dX = (
-                dX_hat * var_inv
-                + dvar * 2 * (self.A_prev - self.mean) / m
-                + dmean / m
-        )
+                dX_hat * self.var_inv
+                + dvar * 2 * (self.A_prev - self.mean) / N
+                + dmean / N
+        )"""
 
         # Normalize gradients by batch size
-        self.dgamma = dgamma / m
-        self.dbeta = dbeta / m
+        self.dgamma = dgamma / N
+        self.dbeta = dbeta / N
 
         return dX
 

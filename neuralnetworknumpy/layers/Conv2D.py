@@ -103,7 +103,7 @@ class Conv2D(Layer):
                         self.Z[n, i, j, f] = np.sum(self.A_pad[n, vs:ve, hs:he, :] * self.W[f]) + self.b[f, 0]
         """
 
-        # im2col: extract every patch into a matrix
+        """# im2col: extract every patch into a matrix
         # Reshape data and weights into matrices for matmul
         # cols shape: (m * H_out * W_out,  K_h * K_w * C_in)
         cols = np.array([
@@ -113,14 +113,27 @@ class Conv2D(Layer):
             for j in range(W_out)
         ])  # (H_out*W_out, m, K_h*K_w*C_in)
 
-        self.cols = cols.transpose(1, 0, 2).reshape(self.m * H_out * W_out, -1)
+        self.cols = cols.transpose(1, 0, 2).reshape(self.m * H_out * W_out, -1)"""
+
+        # Create sliding window view
+        s = self.A_pad.strides
+
+        patches = np.lib.stride_tricks.as_strided(
+            self.A_pad,
+            shape=(self.m, H_out, W_out, K_h, K_w, C_in),
+            strides=(s[0], s[1] * S_h, s[2] * S_w, s[1], s[2], s[3])
+        )
+
+        # Flatten patches
+        # np.ascontiguousarray to make the copy explicit and ensure the result is cache-friendly for matmul.
+        self.cols = np.ascontiguousarray(patches).reshape(self.m * H_out * W_out, -1)
 
         # W_col shape: (filters, K_h*K_w*C_in)
-        W_col = self.W.reshape(self.filters, -1)
+        self.W_col = self.W.reshape(self.filters, -1)
 
         # Matmul to perform convolution
         # Z = A * W + b
-        Z = (self.cols @ W_col.T + self.b.T)  # (m*H_out*W_out, filters)
+        Z = (self.cols @ self.W_col.T + self.b.T)  # (m*H_out*W_out, filters)
         self.Z = Z.reshape(self.m, H_out, W_out, self.filters)
 
 
@@ -149,10 +162,9 @@ class Conv2D(Layer):
 
         # dA: scatter gradients back via col2im
         # dA = dZ * W
-        W_col = self.W.reshape(self.filters, -1)
         # dZ_col shape: (m*H_out*W_out, filters)
         # (m*H_out*W_out, filters) @ (filters, K_h*K_w*C_in) -> (m*H_out*W_out, K_h*K_w*C_in)
-        dcols = (dZ_col @ W_col).reshape(self.m, H_out, W_out, K_h, K_w, -1)
+        dcols = (dZ_col @ self.W_col).reshape(self.m, H_out, W_out, K_h, K_w, -1)
 
         # Pure math based approach, O(n^2), not optimized at all
         """dA_pad = np.zeros_like(self.A_pad)
@@ -164,40 +176,22 @@ class Conv2D(Layer):
                 dA_pad[:, vs:ve, hs:he, :] += dcols[:, idx, :].reshape(self.m, K_h, K_w, -1)
                 idx += 1"""
 
+
         # Scatter dcols back into dA_pad
         # Each position (i,j) contributed a patch A_pad[:, i*S:i*S+K, j*S:j*S+K, :]
         # to the forward pass
-        # In Reverse: accumulate gradients back into the same spatial
-        # positions using stride tricks (np.lib.stride_tricks.as_strided)
-        #
-        # as_strided Creates a VIEW of dA_pad shaped like the patches extracted,
-        # without copying any data
-        # Writing into this view writes directly into dA_pad
-        #
+        # In Reverse: accumulate gradients back into the same spatial positions
+
         # dA_pad shape:      (m, H_pad, W_pad, C_in)
         # patch view shape:  (m, H_out, W_out, K_h, K_w, C_in)
-        #
-        # strides explanation (each number = bytes to step for that dimension):
-        #   m dim     - same as dA_pad's m stride
-        #   H_out dim - move S_h rows in dA_pad   = S_h * (W_pad * C_in) * itemsize
-        #   W_out dim - move S_w cols in dA_pad   = S_w * C_in * itemsize
-        #   K_h dim   - move 1 row in dA_pad      = (W_pad * C_in) * itemsize
-        #   K_w dim   - move 1 col in dA_pad      = C_in * itemsize
-        #   C_in dim  - move 1 channel in dA_pad  = itemsize
-
         dA_pad = np.zeros_like(self.A_pad)
-        s = dA_pad.strides  # (s_m, s_h, s_w, s_c)
 
-        patch_view = np.lib.stride_tricks.as_strided(
-            dA_pad,
-            shape=(self.m, H_out, W_out, K_h, K_w, dA_pad.shape[-1]),
-            strides=(s[0], s[1] * S_h, s[2] * S_w, s[1], s[2], s[3])
-        )
+        for i in range(K_h):
+            for j in range(K_w):
+                # Each iteration is a single vectorised C call — no Python overhead
+                # on the inner (m, H_out, W_out, C_in) dimensions.
+                dA_pad[:, i:i + H_out * S_h:S_h, j:j + W_out * S_w:S_w, :] += dcols[:, :, :, i, j, :]
 
-        # np.add.at is needed instead of += because multiple patches can overlap
-        # (when stride < kernel size). += would only apply the last write;
-        # np.add.at correctly accumulates all contributions.
-        np.add.at(patch_view, np.index_exp[:], dcols)
 
         # Create slices to Remove padding
         h_sl = slice(P_h, -P_h) if P_h > 0 else slice(None)

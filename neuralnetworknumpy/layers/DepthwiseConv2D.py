@@ -1,7 +1,6 @@
 from .Conv2D import Conv2D
 import numpy as np
 
-
 class DepthwiseConv2D(Conv2D):
     def __init__(self, kernel_size, strides:tuple=(1, 1), padding:str="valid", kernel_initializer: str=None):
         super().__init__(
@@ -83,11 +82,15 @@ class DepthwiseConv2D(Conv2D):
         # Multiply patch by filter weights
         # then sum over K_h and K_w - channels stay independent
         # sum over axes 3,4 (K_h, K_w)
-        self.patches = patches
+
+        # Store contiguous copy of patches for use in _backward
+        self.patches = np.ascontiguousarray(patches)
 
         # Matmul to perform convolution
         # Z = A * W + b
-        Z = (patches * self.W).sum(axis=(3, 4)) + self.b.T  # (m, H_out, W_out, C_in)
+        Z = np.einsum('mhwkqc,kqc->mhwc', self.patches, self.W, optimize=True).astype(np.float32)
+        Z += self.b.T
+
 
         self.Z = Z.astype(np.float32)
         self.A_prev = A_prev
@@ -110,49 +113,33 @@ class DepthwiseConv2D(Conv2D):
 
         # dW: (filters, K_h*K_w*C_in)
         # dW = dZ * A_pad (cols and dZ_col - reshaped into matrices for matmul)
-        dZ_expanded = dZ[:, :, :, np.newaxis, np.newaxis, :] #(m, H_out, W_out, K_h, K_w, C_in)
-        dW = (dZ_expanded * self.patches).sum(axis=(0,1,2))
+        # dW: sum over batch and spatial dims, keep kernel and channel dims
+        # einsum - cleaner and avoids the intermediate extensions
+        dW = np.einsum('mhwc,mhwkqc->kqc', dZ, self.patches, optimize=True)
 
+        # Precompute dcols: (m, H_out, W_out, K_h, K_w, C_in)
+        # creating dZ_expanded first
         # dA: scatter gradients back via col2im
         # dA = dZ * W
-        dcols = dZ_expanded * self.W #(m*H_out*W_out, K_h*K_w*C_in)
-
+        dcols = dZ[:, :, :, np.newaxis, np.newaxis, :] * self.W  # broadcast W(K_h,K_w,C_in) only
 
 
         # Scatter dcols back into dA_pad
         # Each position (i,j) contributed a patch A_pad[:, i*S:i*S+K, j*S:j*S+K, :]
         # to the forward pass
-        # In Reverse: accumulate gradients back into the same spatial
-        # positions using stride tricks (np.lib.stride_tricks.as_strided)
-        #
-        # as_strided Creates a VIEW of dA_pad shaped like the patches extracted,
-        # without copying any data
-        # Writing into this view writes directly into dA_pad
-        #
+        # In Reverse: accumulate gradients back into the same spatial positions
+
         # dA_pad shape:      (m, H_pad, W_pad, C_in)
         # patch view shape:  (m, H_out, W_out, K_h, K_w, C_in)
-        #
-        # strides explanation (each number = bytes to step for that dimension):
-        #   m dim     - same as dA_pad's m stride
-        #   H_out dim - move S_h rows in dA_pad   = S_h * (W_pad * C_in) * itemsize
-        #   W_out dim - move S_w cols in dA_pad   = S_w * C_in * itemsize
-        #   K_h dim   - move 1 row in dA_pad      = (W_pad * C_in) * itemsize
-        #   K_w dim   - move 1 col in dA_pad      = C_in * itemsize
-        #   C_in dim  - move 1 channel in dA_pad  = itemsize
 
         dA_pad = np.zeros_like(self.A_pad)
-        s = dA_pad.strides  # (s_m, s_h, s_w, s_c)
 
-        patch_view = np.lib.stride_tricks.as_strided(
-            dA_pad,
-            shape=(self.m, H_out, W_out, K_h, K_w, dA_pad.shape[-1]),
-            strides=(s[0], s[1] * S_h, s[2] * S_w, s[1], s[2], s[3])
-        )
-
-        # np.add.at is needed instead of += because multiple patches can overlap
-        # (when stride < kernel size). += would only apply the last write;
-        # np.add.at correctly accumulates all contributions.
-        np.add.at(patch_view, np.index_exp[:], dcols)
+        for i in range(K_h):
+            for j in range(K_w):
+                dA_pad[:,
+                i:i + H_out * S_h:S_h,
+                j:j + W_out * S_w:S_w,
+                :] += dcols[:, :, :, i, j, :]
 
         # Create slices to Remove padding
         h_sl = slice(P_h, -P_h) if P_h > 0 else slice(None)

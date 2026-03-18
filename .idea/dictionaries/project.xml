@@ -6,6 +6,7 @@
       <w>dmean</w>
       <w>dvar</w>
       <w>pred</w>
+      <w>preds</w>
       <w>rmsprop</w>
       <w>savez</w>
       <w>tanh</w>

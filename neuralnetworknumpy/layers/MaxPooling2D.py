@@ -86,6 +86,10 @@ class MaxPooling2D(Layer):
         # shape: (m, H_out, W_out, C_in)
         self.Z = np.max(patches_flat, axis=3).astype(np.float32)
 
+        # Cache whether this pool is non-overlapping
+        # Used in backward to choose between direct assign and add.at.
+        self._non_overlapping = (S_h >= PS_h and S_w >= PS_w)
+
         self.A_prev = A_prev
         self.A = self.Z  # needed by NeuralNetwork._compute_loss reg term
         return self.Z
@@ -138,9 +142,18 @@ class MaxPooling2D(Layer):
         m_idx = np.arange(self.m).reshape(self.m, 1, 1, 1)
         c_idx = np.arange(C_in).reshape(1, 1, 1, C_in)
 
-        # Scatter dA into the max positions using np.add.at
+
+        # Scatter dA into the max positions
         # dA_pad[m, abs_row, abs_col, c] += dA[n,i,j,c]
-        np.add.at(dA_pad, (m_idx, abs_row, abs_col, c_idx), dA)
+        if self._non_overlapping:
+            # When stride >= pool_size the pool
+            # windows never overlap, so each position in dA_pad receives a gradient
+            # contribution from exactly one output cell. There are no repeated indices,
+            # making += equivalent to =.
+            dA_pad[m_idx, abs_row, abs_col, c_idx] = dA
+        else:
+            # Overlapping pools (stride < pool_size): indices can repeat, must accumulate
+            np.add.at(dA_pad, (m_idx, abs_row, abs_col, c_idx), dA)
 
         # Create slices to Remove padding
         h_sl = slice(P_h, -P_h) if P_h > 0 else slice(None)

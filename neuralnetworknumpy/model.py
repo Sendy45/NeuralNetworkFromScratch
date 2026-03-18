@@ -357,15 +357,19 @@ class NeuralNetwork:
         else:
           raise Exception("Invalid loss function")
 
-        # L2 regularization term: (λ / 2m) * sum(||W||^2)
-        reg_loss = 0.0
-        for layer in self.layers:
-            if hasattr(layer, 'W') and layer.W is not None:
-                reg_loss += np.sum(layer.W ** 2)
+        if self.lambda_ == 0:
+            return data_loss
 
-        reg_loss = (self.lambda_ / (2 * m)) * reg_loss
+        else:
+            # L2 regularization term: (λ / 2m) * sum(||W||^2)
+            reg_loss = 0.0
+            for layer in self.layers:
+                if hasattr(layer, 'W') and layer.W is not None:
+                    reg_loss += np.sum(layer.W ** 2)
 
-        return data_loss + reg_loss
+            reg_loss = (self.lambda_ / (2 * m)) * reg_loss
+
+            return data_loss + reg_loss
 
 
     # Update weights and biases
@@ -575,7 +579,14 @@ class NeuralNetwork:
 
         # Validation
         if X_val is not None and y_val is not None:
-          val_pred = self.predict_proba(X_val)
+          # Divide into batches to save computing power
+          val_batch_size = 256
+          val_preds_list = []
+          for vi in range(0, len(X_val), val_batch_size):
+             vb = X_val[vi:vi + val_batch_size]
+             val_preds_list.append(self._forward(vb, training=False))
+          val_pred = np.concatenate(val_preds_list, axis=0)
+
           val_loss = self._compute_loss(val_pred, y_val)
           val_acc = NeuralNetwork.accuracy(self._decode_output(val_pred), y_val)
           history.add("val_loss", val_loss)
