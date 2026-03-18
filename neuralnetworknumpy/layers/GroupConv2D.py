@@ -30,16 +30,12 @@ class GroupConv2D(Conv2D):
 
         self.groups = groups # number of groups
 
-        self.in_per_group = None
-        self.out_per_group = None
 
     def build(self, input_size):
         if input_size % self.groups != 0:
             raise ValueError(f"Input channels {input_size} not divisible by groups {self.groups}")
-        self.in_per_group = input_size // self.groups
         if self.filters % self.groups != 0:
             raise ValueError(f"Filters {self.filters} not divisible by groups {self.groups}")
-        self.out_per_group = self.filters // self.groups
         super().build(input_size)
 
 

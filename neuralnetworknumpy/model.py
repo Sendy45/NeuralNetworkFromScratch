@@ -1,7 +1,7 @@
 import numpy as np
 from tqdm.auto import tqdm
 
-from . import Flatten, GlobalAveragePooling2D, DepthwiseConv2D, DepthwiseSeparableConv2D
+from . import Flatten, GlobalAveragePooling2D, DepthwiseConv2D, DepthwiseSeparableConv2D, GroupConv2D
 from .layers import Dropout, Activation, BatchNorm, Dense, Conv2D, MaxPooling2D, AveragePooling2D, ResidualBlock, \
     BatchNorm2D
 from .utils import History
@@ -204,6 +204,19 @@ class NeuralNetwork:
                 layer.beta = entry["beta"]
                 layer.running_mean = entry["running_mean"]
                 layer.running_var = entry["running_var"]
+
+            elif layer_type == "GroupConv2D":
+                layer = GroupConv2D(filters=entry["filters"],kernel_size=entry["kernel_size"])
+                layer.groups = entry["groups"]
+                layer.W = entry["W"]
+                layer.b = entry["b"]
+                layer.in_size = entry["in_size"]
+                layer.out_size = entry["out_size"]
+                layer.kernel_initializer = entry["kernel_initializer"]
+                layer.padding = entry["padding"]
+                layer._padding_val = entry["_padding_val"]
+                layer.strides = entry["strides"]
+
 
             elif layer_type == "Flatten":
                 layer = Flatten()
@@ -523,6 +536,15 @@ class NeuralNetwork:
       self.lambda_ = original_lambda
       return rel_diff
 
+    # Returns the feature maps of a specific convolutional layer
+    def visualize_feature_maps(self, X, layer_index):
+        A = X
+        for idx, layer in enumerate(self.layers):
+            A = layer._forward(A, training=False)
+            if idx == layer_index:
+                # feature maps shape: (m, H, W, C_out)
+                return A
+        raise ValueError(f"Layer index {layer_index} out of range")
 
     # Compile the model and trains it
     # x - input features

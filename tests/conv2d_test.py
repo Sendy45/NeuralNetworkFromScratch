@@ -1,3 +1,7 @@
+import os
+
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+
 import numpy as np
 from keras.datasets import fashion_mnist
 from neuralnetworknumpy import (
@@ -50,6 +54,8 @@ model.compile(
 history = model.fit(
     X=train_X, y=train_y,
     X_val=test_X, y_val=test_y,
-    epochs=5,
+    epochs=3,
     batch_size=64
 )
+
+model.save("conv2d_model.h5")
