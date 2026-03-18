@@ -27,6 +27,7 @@ from .layers import (
     SpatiallySeparableConv2D,
     ResidualBlock,
     BatchNorm2D,
+    GroupConv2D,
 )
 
 # Model
@@ -69,6 +70,7 @@ __all__ = [
     "SpatiallySeparableConv2D",
     "ResidualBlock",
     "BatchNorm2D",
+    "GroupConv2D",
 
     # Utilities
     "History",

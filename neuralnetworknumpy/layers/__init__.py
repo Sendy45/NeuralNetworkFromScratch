@@ -9,6 +9,7 @@ from .DepthwiseSeparableConv2D import DepthwiseSeparableConv2D
 from .SpatiallySeparableConv2D import SpatiallySeparableConv2D
 from .ResidualBlock import ResidualBlock
 from .BatchNorm2D import BatchNorm2D
+from .GroupConv2D import GroupConv2D
 from .Dense import Dense
 from .Dropout import Dropout
 from .BatchNorm import BatchNorm
@@ -26,6 +27,7 @@ __ALL__ = [
     SpatiallySeparableConv2D,
     ResidualBlock,
     BatchNorm2D,
+    GroupConv2D,
     Dense,
     Dropout,
     BatchNorm,
