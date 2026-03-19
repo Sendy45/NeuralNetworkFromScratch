@@ -3,6 +3,15 @@ import numpy as np
 
 
 class Conv2D(Layer):
+    """
+        Standard 2D convolution layer.
+
+        Applies multiple learnable filters over spatial input.
+        Each filter spans all input channels and produces one output channel.
+
+        Weight shape: (filters, K_h, K_w, C_in)
+          [num_filters, kernel height, kernel width, input channels]
+    """
     def __init__(self, filters, kernel_size, strides:tuple=(1, 1), padding:str="valid", kernel_initializer: str=None):
         super().__init__()
         self.in_size = None
@@ -203,11 +212,11 @@ class Conv2D(Layer):
 
 
     def _update(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
-        m = self.A_prev.shape[0]  # batch size (row-major: axis 0)
 
         if optimizer == "adamW":
             dw = self.dW
         else:
+            m = self.A_prev.shape[0]  # batch size (row-major: axis 0)
             dw = self.dW + (lambda_ / m) * self.W  # L2
 
         if optimizer == "momentum":

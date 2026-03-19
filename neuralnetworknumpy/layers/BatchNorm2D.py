@@ -3,6 +3,15 @@ import numpy as np
 
 
 class BatchNorm2D(Layer):
+    """
+        Batch normalization for convolutional inputs.
+
+        Normalizes each channel across batch and spatial dimensions.
+
+        Learns scale (gamma) and shift (beta) parameters.
+
+        Stabilizes and accelerates training.
+    """
     def __init__(self, momentum=0.9):
         super().__init__()
         # Momentum for running mean/variance (used during inference)

@@ -2,9 +2,21 @@ from .Layer import Layer
 from .Conv2D import Conv2D
 
 class SpatiallySeparableConv2D(Layer):
+    """
+        Factorized convolution: spatial separation.
+
+        Replaces K×K convolution with:
+        - K×1 convolution
+        - 1×K convolution
+
+        Reduces computation while approximating full spatial convolution.
+
+        Not recommended to use spatially separable convolution.
+    """
     def __init__(self, filters, kernel_size, strides=(1, 1), padding="valid"):
         super().__init__()
 
+        # Handle non tuple kernel size
         if isinstance(kernel_size, tuple):
             k = kernel_size[0]
         else:

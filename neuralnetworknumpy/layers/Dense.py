@@ -3,6 +3,15 @@ import numpy as np
 
 
 class Dense(Layer):
+  """
+    Fully connected (linear) layer.
+
+    Computes: Z = A_prev · W + b
+
+    Connects every input feature to every output neuron.
+
+    Weight shape: (in_features, out_features)
+  """
   def __init__(self, units: int, inputs:int=0, kernel_initializer: str=None):
     super().__init__()
 
@@ -17,6 +26,8 @@ class Dense(Layer):
 
   def _set_default_initializers(self):
       self.kernel_initializer = "he"
+
+      # Broke during project restructuring
       """if self.activation == "relu":
           self.initializer = "he"
       elif self.activation in ["sigmoid", "tanh", "softmax", "linear"]:

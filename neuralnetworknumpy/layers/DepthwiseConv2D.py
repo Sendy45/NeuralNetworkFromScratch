@@ -3,6 +3,9 @@ from .GroupConv2D import GroupConv2D
 class DepthwiseConv2D(GroupConv2D):
     """
         Depthwise convolution: one K_h×K_w filter per input channel, no mixing.
+
+        Each channel is convolved independently.
+
         Equivalent to GroupConv2D(filters=C_in, groups=C_in).
 
         Weight shape: (C_in, 1, K_h, K_w, 1)

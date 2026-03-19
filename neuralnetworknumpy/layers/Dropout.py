@@ -3,6 +3,13 @@ import numpy as np
 
 
 class Dropout(Layer):
+  """
+    Regularization layer that randomly zeros activations during training.
+
+    Prevents overfitting by reducing co-adaptation of neurons.
+
+    Disabled during inference.
+  """
   def __init__(self, rate):
     super().__init__()
     self.rate = rate  # probability of dropping a unit

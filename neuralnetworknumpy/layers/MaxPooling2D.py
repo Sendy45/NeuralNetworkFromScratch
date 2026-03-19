@@ -3,6 +3,13 @@ import numpy as np
 
 
 class MaxPooling2D(Layer):
+    """
+        Downsamples input by taking the maximum value in each window.
+
+        Reduces spatial size while keeping strongest features.
+
+        No learnable parameters.
+    """
     def __init__(self, pool_size=(2, 2), strides=(2, 2), padding="same"):
         super().__init__()
 

@@ -1,4 +1,15 @@
 class Layer:
+  """
+    Base class for all layers in the network.
+
+    Defines the standard interface:
+    - _forward: compute output activations
+    - _backward: compute gradients
+    - _update: update parameters
+
+    Enables modular stacking of layers inside NeuralNetwork.
+  """
+
   def __init__(self):
     # Trainable parameters (some layers won't use them)
     self.W = None
@@ -28,6 +39,8 @@ class Layer:
   def _backward(self, dA):
     raise NotImplementedError
 
+  # Update model parameters to enable learning
+  # handles optimizers
   def _update(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
     raise NotImplementedError
 

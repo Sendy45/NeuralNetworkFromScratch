@@ -1,8 +1,16 @@
 from .Layer import Layer
 import numpy as np
 
-# Good large number of channels, not recommended for low number of channels
 class GlobalAveragePooling2D(Layer):
+    """
+        Reduces each feature map to a single value.
+
+        Converts (m, H, W, C) -> (m, C) by averaging spatial dimensions.
+
+        Often used before classification layers to reduce parameters.
+
+        Good large number of channels, not recommended for low number of channels
+    """
     def __init__(self):
         super().__init__()
 

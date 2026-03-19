@@ -1,19 +1,30 @@
 from .Layer import Layer
 
 class ResidualBlock(Layer):
+    """
+        Residual connection block (skip connection).
+
+        Output = F(x) + x (or projection(x) if dimensions differ).
+
+        Helps training deep networks by preserving gradients.
+    """
     def __init__(self, layers, projection=None):
         super().__init__()
         self.layers = layers         # main path
-        self.projection = projection # optional shortcut (Conv1x1
+        self.projection = projection # optional shortcut (Conv1x1)
 
     def _forward(self, A_prev, training=None):
         self.A_prev = A_prev
 
         out = A_prev
+
+        # Find the F(x), main output
         for layer in self.layers:
             out = layer._forward(out, training=training)
 
         shortcut_out = A_prev
+        # Handle projection if needed
+        # output and shortcut_out shapes not aligning due to strides
         if self.projection is not None:
             shortcut_out = self.projection._forward(shortcut_out, training=training)
 
@@ -38,8 +49,11 @@ class ResidualBlock(Layer):
         return dZ_main + dZ_short
 
     def _update(self, *args):
+        # Update each layer inside of block
         for layer in self.layers:
             layer._update(*args)
+
+        # Update projection conv2d (1x1 conv)
         if self.projection is not None:
             self.projection._update(*args)
 

@@ -3,6 +3,14 @@ from .Layer import Layer
 from .Conv2D import Conv2D
 
 class DepthwiseSeparableConv2D(Layer):
+    """
+        Factorized convolution: depthwise + pointwise.
+
+        Step 1: DepthwiseConv2D (spatial filtering per channel)
+        Step 2: 1×1 Conv2D (channel mixing)
+
+        Reduces computation compared to standard Conv2D.
+    """
     def __init__(self, filters, kernel_size, strides=(1, 1), padding="valid"):
         super().__init__()
         self.depthwise = DepthwiseConv2D(kernel_size, strides=strides, padding=padding)

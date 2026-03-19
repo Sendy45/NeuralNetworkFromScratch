@@ -3,6 +3,15 @@ import numpy as np
 
 
 class BatchNorm(Layer):
+    """
+        Batch normalization for dense layers.
+
+        Normalizes features across the batch dimension.
+
+        Learns scale (gamma) and shift (beta).
+
+        Improves stability and convergence.
+    """
     def __init__(self, momentum=0.9):
         super().__init__()
         # Momentum for running mean/variance (used during inference)

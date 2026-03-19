@@ -3,6 +3,13 @@ import numpy as np
 
 
 class AveragePooling2D(Layer):
+    """
+        Downsamples input by averaging values in each window.
+
+        Produces smoother feature maps compared to max pooling.
+
+        No learnable parameters.
+    """
     def __init__(self, pool_size=(2, 2), strides=(2, 2), padding="same"):
         super().__init__()
 
