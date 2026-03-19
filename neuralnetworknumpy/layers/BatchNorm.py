@@ -116,8 +116,8 @@ class BatchNorm(Layer):
         # Mean derivative
         # dmean = Σ (dX̂ * - (σ² + ε)^(1/2)) + dvar * Σ (-2 * (X - μ)) / m
         dmean = (
-                np.sum(dX_hat * -var_inv, axis=(0, 1, 2), keepdims=True)
-                + dvar * np.sum(-2. * (self.A_prev - self.mean), axis=(0, 1, 2), keepdims=True) / m
+                np.sum(dX_hat * -var_inv, axis=(0, ), keepdims=True)
+                + dvar * np.sum(-2. * (self.A_prev - self.mean), axis=(0, ), keepdims=True) / m
         )
 
         # Total derivative

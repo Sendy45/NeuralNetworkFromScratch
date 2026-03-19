@@ -324,11 +324,11 @@ class NeuralNetwork:
 
 
     # Backward function - locates the origin of the loss and tweaks it
-    def _backward(self, y_true):
+    def _backward(self, y_pred, y_true):
       m = y_true.size
 
 
-      dA = self._loss_derivative(self.layers[-1].A, y_true) / m
+      dA = self._loss_derivative(y_pred, y_true) / m
       dA = self.layers[-1]._backward(dA)
 
       # Remaining layers
@@ -478,7 +478,7 @@ class NeuralNetwork:
     @staticmethod
     def shuffle_data(x, y):
         perm = np.random.permutation(y.size)
-        x = x[perm] if x.ndim > 2 else x[:, perm]
+        x = x[perm]
         y = y[perm]
         return x, y
 
@@ -488,10 +488,10 @@ class NeuralNetwork:
 
 
     def check_gradient(self, X, y):
-      assert X.shape[1] == y.size, f"X has {X.shape[1]} samples but y has {y.size}"
+      assert X.shape[0] == y.size, f"X has {X.shape[0]} samples but y has {y.size}"
 
       # Use a small batch to avoid numerical issues
-      X = X[:, :8].astype(np.float64)  # <-- float64 is critical for numerical grad
+      X = X[:8].astype(np.float64)  # <-- float64 is critical for numerical grad
       y = y[:8]
 
       rel_diff = []
@@ -499,8 +499,8 @@ class NeuralNetwork:
       self.lambda_ = 0.0
       epsilon = 1e-5  # smaller epsilon can help
 
-      self._forward(X, training=False)
-      self._backward(y)
+      y_pred = self._forward(X, training=False)
+      self._backward(y_pred, y)
 
       # Snapshot ALL analytical gradients before any weight perturbation
       analytical_grads = {}
@@ -577,18 +577,17 @@ class NeuralNetwork:
           optimizer_t += 1
 
           # get batch
-          x_batch = x_shuffled[i:i + batch_size] if X.ndim > 2 else x_shuffled[:, i:i + batch_size]
+          x_batch = x_shuffled[i:i + batch_size]
           y_batch = y_shuffled[i:i + batch_size]
           # feed model
-          self._forward(x_batch)
-          self._backward(y_batch)
+          y_pred = self._forward(x_batch)
+          self._backward(y_pred, y_batch)
           self._update(optimizer_t)
 
-          y_pred = self.layers[-1].A
           # Monitor loss - epoch_loss = Avg(batches_loss)
           predictions.append(self._decode_output(y_pred))
           batch_loss = self._compute_loss(y_pred, y_batch)
-          epoch_loss += batch_loss * n_samples / X.shape[1]
+          epoch_loss += batch_loss * n_samples / X.shape[0]
 
           # Check Gradient - make sure backpropagation works well
           #self.check_gradient(x_batch, y_batch)
@@ -644,8 +643,8 @@ class NeuralNetwork:
 
     # Train the model
     def fit(self, X, y, X_val=None, y_val=None, epochs=10, batch_size=1):
-        """if X.shape[1] != y.size:
-            raise ValueError("Mismatch between samples and labels")"""
+        if X.shape[0] != y.size:
+            raise ValueError("Mismatch between samples and labels")
 
         # Find last layer - last outsize is num classes
         for layer in reversed(self.layers):

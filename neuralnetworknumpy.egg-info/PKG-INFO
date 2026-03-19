@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: neuralnetworknumpy
-Version: 0.1.3
+Version: 0.2.1
 Summary: A neural network framework built completely from scratch using NumPy
 Author: Itamar Senderovitz
 License: MIT
@@ -37,7 +37,7 @@ cd neuralnetworknumpy
 pip install .
 ```
 
-**Dependencies:** `numpy`, `tqdm`
+**Dependencies:** `numpy`, `tqdm`  
 **Optional (for examples):** `keras` (datasets only)
 
 ---
@@ -133,7 +133,7 @@ model = NeuralNetwork(layers)
 | `NeuralNetwork.load(path)` | Load a saved model |
 | `summary()` | Print layer shapes and parameter counts |
 
-**Optimizers:** `"adam"`, `"adamW"`, `"momentum"`, `"rmsprop"`, `"sgd"`
+**Optimizers:** `"adam"`, `"adamW"`, `"momentum"`, `"rmsprop"`, `"sgd"`  
 **Loss functions:** `"cross_entropy"`, `"mse"`
 
 ---

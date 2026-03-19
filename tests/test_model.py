@@ -35,10 +35,6 @@ test_X = scaler.fit_transform(test_X)
 # Split into training and validation
 train_X, train_y, val_X, val_y = split_train_validation(train_X, train_y, 0.1)
 
-# Transpose to match network input (features, samples)
-train_X = train_X.T  # (784, 54000)
-val_X   = val_X.T    # (784, 6000)
-test_X  = test_X.T   # (784, 10000)
 
 print("Train X:", train_X.shape, "Train y:", train_y.shape)
 print("Validation X:", val_X.shape, "Validation y:", val_y.shape)
@@ -54,9 +50,9 @@ model.save("model.h5")
 print(f"Training time: {time.time() - start_time}")
 
 
-idx = np.random.randint(test_X.shape[1])   # random sample index
+idx = np.random.randint(test_X.shape[0])   # random sample index
 
-x = test_X[:, idx:idx+1]    # shape (784, 1)
+x = test_X[idx:idx+1]    # shape (1, 784)
 y_true = test_y[idx]
 
 y_pred = model.predict(x)
