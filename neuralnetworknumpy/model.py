@@ -1,5 +1,6 @@
 import numpy as np
 from tqdm.auto import tqdm
+import pickle, os
 
 from . import Flatten, GlobalAveragePooling2D, DepthwiseConv2D, DepthwiseSeparableConv2D, GroupConv2D
 from .layers import Dropout, Activation, BatchNorm, Dense, Conv2D, MaxPooling2D, AveragePooling2D, ResidualBlock, \
@@ -21,6 +22,72 @@ class NeuralNetwork:
         self.optimizer = "adam"
 
     def save(self, path):
+        """
+          Serialise the full model to a .pkl file.
+
+          pickle writes directly to disk, keeping peak memory proportional to
+          the largest single weight tensor rather than the whole model.
+        """
+
+        if not path.endswith(".pkl"):
+            path = path + ".pkl"
+
+        # Strip large cached training intermediates before saving.
+        # These (patches, cols, A_pad, A_prev, etc.) are rebuilt on the next
+        # forward pass and can be several times larger than the weights.
+        def _strip(layer):
+            for attr in ("p2d", "cols", "patches", "A_pad", "A_prev",
+                         "x_mu", "X_hat", "Z", "dW", "db", "A"):
+                layer.__dict__.pop(attr, None)
+            if hasattr(layer, "layers"):
+                for sub in layer.layers:
+                    _strip(sub)
+            if hasattr(layer, "projection") and layer.projection is not None:
+                _strip(layer.projection)
+            if hasattr(layer, "depthwise"):
+                _strip(layer.depthwise)
+            if hasattr(layer, "pointwise"):
+                _strip(layer.pointwise)
+
+        for layer in self.layers:
+            _strip(layer)
+
+        with open(path, "wb") as f:
+            pickle.dump({
+                "layers": self.layers,
+                "lr": self.lr,
+                "lambda_": self.lambda_,
+                "beta1": self.beta1,
+                "beta2": self.beta2,
+                "loss_type": self.loss_type,
+                "optimizer": self.optimizer,
+                "num_classes": self.num_classes,
+            }, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+        print(f"Model saved → {path}  ({os.path.getsize(path) / 1e6:.1f} MB)")
+
+    @staticmethod
+    def load(path):
+        """Load a model saved with model.save()."""
+        import pickle
+
+        if not path.endswith(".pkl"):
+            path = path + ".pkl"
+
+        with open(path, "rb") as f:
+            data = pickle.load(f)
+
+        model = NeuralNetwork(data["layers"])
+        model.lr = data["lr"]
+        model.lambda_ = data["lambda_"]
+        model.beta1 = data["beta1"]
+        model.beta2 = data["beta2"]
+        model.loss_type = data["loss_type"]
+        model.optimizer = data["optimizer"]
+        model.num_classes = data["num_classes"]
+        return model
+
+    """def save(self, path):
         layer_data = []
 
         for layer in self.layers:
@@ -238,7 +305,7 @@ class NeuralNetwork:
         model.optimizer = data["optimizer"].item()
         model.num_classes = data["num_classes"].item()
 
-        return model
+        return model"""
 
 
     def summary(self):
