@@ -1,4 +1,9 @@
 from .Layer import Layer
+from .Dense import Dense
+from .Dropout import Dropout
+from .BatchNorm import BatchNorm
+from .Activation import Activation, ReLu, Linear, Sigmoid, Softmax, Tanh
+
 from .Conv2D import Conv2D
 from .Flatten import Flatten
 from .MaxPooling2D import MaxPooling2D
@@ -10,13 +15,22 @@ from .SpatiallySeparableConv2D import SpatiallySeparableConv2D
 from .ResidualBlock import ResidualBlock
 from .BatchNorm2D import BatchNorm2D
 from .GroupConv2D import GroupConv2D
-from .Dense import Dense
-from .Dropout import Dropout
-from .BatchNorm import BatchNorm
-from .Activation import Activation, ReLu, Linear, Sigmoid, Softmax, Tanh
+
+from .Embedding import Embedding
+
 
 __ALL__ = [
     Layer,
+    Dense,
+    Dropout,
+    BatchNorm,
+    Activation,
+    ReLu,
+    Linear,
+    Sigmoid,
+    Softmax,
+    Tanh,
+
     Conv2D,
     Flatten,
     MaxPooling2D,
@@ -28,13 +42,6 @@ __ALL__ = [
     ResidualBlock,
     BatchNorm2D,
     GroupConv2D,
-    Dense,
-    Dropout,
-    BatchNorm,
-    Activation,
-    ReLu,
-    Linear,
-    Sigmoid,
-    Softmax,
-    Tanh,
+
+    Embedding,
 ]

@@ -3,7 +3,7 @@ neuralnetworknumpy
 A minimal deep learning framework built using NumPy.
 """
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 # Layers
 from .layers import (
@@ -17,6 +17,7 @@ from .layers import (
     Tanh,
     BatchNorm,
     Dropout,
+
     Conv2D,
     Flatten,
     MaxPooling2D,
@@ -28,8 +29,15 @@ from .layers import (
     ResidualBlock,
     BatchNorm2D,
     GroupConv2D,
+
+    Embedding,
 )
 
+# tokenizer
+from tokenizer import (
+    Tokenizer,
+    Vocab,
+)
 # Model
 from .model import NeuralNetwork
 
@@ -71,6 +79,9 @@ __all__ = [
     "ResidualBlock",
     "BatchNorm2D",
     "GroupConv2D",
+
+    # Language Layers
+    "Embedding",
 
     # Utilities
     "History",

@@ -2,9 +2,7 @@ import numpy as np
 from tqdm.auto import tqdm
 import pickle, os
 
-from . import Flatten, GlobalAveragePooling2D, DepthwiseConv2D, DepthwiseSeparableConv2D, GroupConv2D
-from .layers import Dropout, Activation, BatchNorm, Dense, Conv2D, MaxPooling2D, AveragePooling2D, ResidualBlock, \
-    BatchNorm2D
+from .layers import Dropout, BatchNorm, Dense, Conv2D, MaxPooling2D, AveragePooling2D
 from .utils import History
 
 class NeuralNetwork:
@@ -86,226 +84,6 @@ class NeuralNetwork:
         model.optimizer = data["optimizer"]
         model.num_classes = data["num_classes"]
         return model
-
-    """def save(self, path):
-        layer_data = []
-
-        for layer in self.layers:
-            entry = {"type": type(layer).__name__}
-
-            if isinstance(layer, Dense):
-                entry.update({
-                    "W": layer.W,
-                    "b": layer.b,
-                    "in_size": layer.in_size,
-                    "out_size": layer.out_size,
-                    "kernel_initializer": layer.kernel_initializer,
-                })
-            elif isinstance(layer, (BatchNorm, BatchNorm2D)):
-                entry.update({
-                    "gamma": layer.gamma,
-                    "beta": layer.beta,
-                    "running_mean": layer.running_mean,
-                    "running_var": layer.running_var,
-                    "momentum": layer.momentum,
-                })
-            elif isinstance(layer, Dropout):
-                entry["rate"] = layer.rate
-
-            elif isinstance(layer, Conv2D):
-                entry.update({
-                    "W": layer.W,
-                    "b": layer.b,
-                    "kernel_initializer": layer.kernel_initializer,
-                    "filters": layer.filters,
-                    "kernel_size": layer.kernel_size,
-                    "padding": layer.padding,
-                    "_padding_val": layer._padding_val,
-                    "strides": layer.strides,
-                    "in_size": layer.in_size,
-                    "out_size": layer.out_size,
-                })
-            elif isinstance(layer, (MaxPooling2D, AveragePooling2D)):
-                entry.update({
-                    "pool_size": layer.pool_size,
-                    "strides": layer.strides,
-                    "padding": layer.padding,
-                    "_padding_val": layer._padding_val,
-                })
-
-            elif isinstance(layer, DepthwiseConv2D):
-                entry.update({
-                    "W": layer.W,
-                    "b": layer.b,
-                    "in_size": layer.in_size,
-                    "kernel_size": layer.kernel_size,
-                    "padding": layer.padding,
-                    "_padding_val": layer._padding_val,
-                    "strides": layer.strides,
-
-                })
-            elif isinstance(layer, DepthwiseSeparableConv2D):
-                entry.update({
-                    "filters": layer.pointwise.filters,
-                    "kernel_size": layer.depthwise.kernel_size,
-                    "depthwise": layer.depthwise,
-                    "pointwise": layer.pointwise,
-                })
-
-            elif isinstance(layer, ResidualBlock):
-                entry.update({
-                    "layers": layer.layers,
-                    "projection": layer.projection,
-                })
-
-            # Activation layers (ReLu, Sigmoid, etc.) and Flatten layer need no extra data
-
-            layer_data.append(entry)
-
-        np.savez(
-            path,
-            layers=np.array(layer_data, dtype=object),
-            lr=self.lr,
-            lambda_=self.lambda_,
-            beta1=self.beta1,
-            beta2=self.beta2,
-            loss_type=self.loss_type,
-            optimizer=self.optimizer,
-            num_classes=self.num_classes,
-        )
-
-
-    @staticmethod
-    def load(path):
-        from .layers import Dense, BatchNorm, Dropout, ReLu, Sigmoid, Softmax, Tanh, Linear
-
-        ACTIVATION_MAP = {
-            "ReLu": ReLu,
-            "Sigmoid": Sigmoid,
-            "Softmax": Softmax,
-            "Tanh": Tanh,
-            "Linear": Linear,
-        }
-
-        data = np.load(path, allow_pickle=True)
-        layers = []
-
-        for entry in data["layers"]:
-            layer_type = entry["type"]
-
-            if layer_type == "Dense":
-                layer = Dense(units=entry["out_size"])
-                layer.W = entry["W"]
-                layer.b = entry["b"]
-                layer.in_size = entry["in_size"]
-                layer.out_size = entry["out_size"]
-                layer.kernel_initializer = entry["kernel_initializer"]
-                # Restore optimizer states as zeros (not serialized)
-                layer.vW = np.zeros_like(layer.W)
-                layer.vb = np.zeros_like(layer.b)
-                layer.mW = np.zeros_like(layer.W)
-                layer.mb = np.zeros_like(layer.b)
-
-            elif layer_type == "BatchNorm":
-                layer = BatchNorm(momentum=entry["momentum"])
-                layer.gamma = entry["gamma"]
-                layer.beta = entry["beta"]
-                layer.running_mean = entry["running_mean"]
-                layer.running_var = entry["running_var"]
-
-            elif layer_type == "Dropout":
-                layer = Dropout(rate=entry["rate"])
-
-            elif layer_type == "Conv2D":
-                layer = Conv2D(filters=entry["filters"],
-                kernel_size=entry["kernel_size"])
-                layer.W = entry["W"]
-                layer.b = entry["b"]
-                layer.in_size = entry["in_size"]
-                layer.out_size = entry["out_size"]
-                layer.kernel_initializer = entry["kernel_initializer"]
-                layer.filters = entry["filters"]
-                layer.kernel_size = entry["kernel_size"]
-                layer.padding = entry["padding"]
-                layer._padding_val = entry["_padding_val"]
-                layer.strides = entry["strides"]
-
-            elif layer_type == "MaxPooling2D":
-                layer = MaxPooling2D(pool_size=entry["pool_size"])
-                layer.strides = entry["strides"]
-                layer.padding = entry["padding"]
-                layer._padding_val = entry["_padding_val"]
-
-            elif layer_type == "AveragePooling2D":
-                layer = AveragePooling2D(pool_size=entry["pool_size"])
-                layer.strides = entry["strides"]
-                layer.padding = entry["padding"]
-                layer._padding_val = entry["_padding_val"]
-
-            elif layer_type == "GlobalAveragePooling2D":
-                layer = GlobalAveragePooling2D()
-
-            elif layer_type == "DepthwiseConv2D":
-                layer = DepthwiseConv2D(kernel_size=entry["kernel_size"])
-                layer.W = entry["W"]
-                layer.b = entry["b"]
-                layer.in_size = entry["in_size"]
-                layer.filters = entry["filters"]
-                layer.kernel_size = entry["kernel_size"]
-                layer.padding = entry["padding"]
-                layer._padding_val = entry["_padding_val"]
-                layer.strides = entry["strides"]
-
-            elif layer_type == "DepthwiseSeparableConv2D":
-                layer = DepthwiseSeparableConv2D(filters=entry["filters"], kernel_size=entry["kernel_size"])
-                layer.depthwise =entry["depthwise"]
-                layer.pointwise =entry["pointwise"]
-
-            elif layer_type == "ResidualBlock":
-                layer = ResidualBlock(layers=entry["layers"])
-                layer.projection = entry["projection"]
-
-            elif layer_type == "BatchNorm2D":
-                layer = BatchNorm2D(momentum=entry["momentum"])
-                layer.gamma = entry["gamma"]
-                layer.beta = entry["beta"]
-                layer.running_mean = entry["running_mean"]
-                layer.running_var = entry["running_var"]
-
-            elif layer_type == "GroupConv2D":
-                layer = GroupConv2D(filters=entry["filters"],kernel_size=entry["kernel_size"])
-                layer.groups = entry["groups"]
-                layer.W = entry["W"]
-                layer.b = entry["b"]
-                layer.in_size = entry["in_size"]
-                layer.out_size = entry["out_size"]
-                layer.kernel_initializer = entry["kernel_initializer"]
-                layer.padding = entry["padding"]
-                layer._padding_val = entry["_padding_val"]
-                layer.strides = entry["strides"]
-
-
-            elif layer_type == "Flatten":
-                layer = Flatten()
-
-            elif layer_type in ACTIVATION_MAP:
-                layer = ACTIVATION_MAP[layer_type]()
-
-            else:
-                raise ValueError(f"Unknown layer type: {layer_type}")
-
-            layers.append(layer)
-
-        model = NeuralNetwork(layers)
-        model.lr = data["lr"].item()
-        model.lambda_ = data["lambda_"].item()
-        model.beta1 = data["beta1"].item()
-        model.beta2 = data["beta2"].item()
-        model.loss_type = data["loss_type"].item()
-        model.optimizer = data["optimizer"].item()
-        model.num_classes = data["num_classes"].item()
-
-        return model"""
 
 
     def summary(self):
@@ -654,10 +432,13 @@ class NeuralNetwork:
           # Monitor loss - epoch_loss = Avg(batches_loss)
           predictions.append(self._decode_output(y_pred))
           batch_loss = self._compute_loss(y_pred, y_batch)
-          epoch_loss += batch_loss * n_samples / X.shape[0]
+          epoch_loss += batch_loss
 
           # Check Gradient - make sure backpropagation works well
           #self.check_gradient(x_batch, y_batch)
+
+        # Average loss over batches
+        epoch_loss /= (n_samples // batch_size)
 
         predictions = np.concatenate(predictions)
 
