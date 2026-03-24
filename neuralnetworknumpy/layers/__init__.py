@@ -17,6 +17,7 @@ from .BatchNorm2D import BatchNorm2D
 from .GroupConv2D import GroupConv2D
 
 from .Embedding import Embedding
+from .RNN import RNN
 
 
 __ALL__ = [
@@ -44,4 +45,5 @@ __ALL__ = [
     GroupConv2D,
 
     Embedding,
+    RNN,
 ]

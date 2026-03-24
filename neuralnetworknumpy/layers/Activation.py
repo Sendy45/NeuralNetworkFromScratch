@@ -67,14 +67,14 @@ class Softmax(Activation):
   # A = e^(Z - max(Z)) / ∑ (e^(Z - max(Z)))
   def _forward(self, Z, training=None):
       self.Z = Z
-      shifted = Z - np.max(Z, axis=1, keepdims=True)
+      shifted = Z - np.max(Z, axis=-1, keepdims=True)
       exp_vals = np.exp(shifted)
-      self.A = exp_vals / np.sum(exp_vals, axis=1, keepdims=True)
+      self.A = exp_vals / np.sum(exp_vals, axis=-1, keepdims=True)
       return self.A
 
   # dA = A * (dZ - ∑(dZ * A))
   def _backward(self, dZ):
-      s = np.sum(dZ * self.A, axis=1, keepdims=True)
+      s = np.sum(dZ * self.A, axis=-1, keepdims=True)
       return self.A * (dZ - s)
 
 class Linear(Activation):

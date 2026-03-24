@@ -8,6 +8,7 @@ from .utils import History
 class NeuralNetwork:
     def __init__(self, layers:list):
 
+        self.task = None
         self.num_classes = 0
         self.layers = layers
 
@@ -18,6 +19,10 @@ class NeuralNetwork:
         self.beta2 = 0.999
         self.loss_type = "cross_entropy"
         self.optimizer = "adam"
+
+    """ **********************************************************
+        Utils Functions
+    ********************************************************** """
 
     def save(self, path):
         """
@@ -187,30 +192,60 @@ class NeuralNetwork:
 
     # Loss derivative - for the last layer based on the loss-type
     def _loss_derivative(self, y_pred, y_true):
-        one_hot = self._one_hot_encoding(y_true) # y_true formatting
         # Division by m happens in backward function
+
+        # - y_true / y_pred
         if self.loss_type == "cross_entropy":
-            # - y_true / y_pred
-            return -(one_hot / (y_pred + self._eps))
+            # (B, T, V)
+            if self.task == "language_model":
+                B, T, V = y_pred.shape
 
+                d = np.zeros_like(y_pred)
+
+                d[np.arange(B)[:, None], np.arange(T), y_true] = -1.0 / (
+                        y_pred[np.arange(B)[:, None], np.arange(T), y_true] + self._eps
+                )
+
+                return d
+            # (B, V)
+            elif self.task == "classification":
+                d = np.zeros_like(y_pred)
+                m = y_true.size
+                d[np.arange(m), y_true] = -1.0 / (y_pred[np.arange(m), y_true] + self._eps)
+                return d
+            else:
+                raise Exception("Invalid loss function")
+
+        # 2 * (y_pred - y_true)
         elif self.loss_type == "mse":
-            # 2 * (y_pred - y_true)
+            one_hot = self._one_hot_encoding(y_true)
             return 2 * (y_pred - one_hot)
-
         else:
             raise Exception("Invalid loss function")
 
 
     # Compute loss for logging
     def _compute_loss(self, y_pred, y_true):
-        one_hot = self._one_hot_encoding(y_true)  # shape: (num_classes, N)
         m = y_true.size
 
+        # -1/m * ∑ (y_true * log(y_pred))
         if self.loss_type == "cross_entropy":
-          # -1/m * ∑ (y_true * log(y_pred))
-          data_loss = -1 * np.sum(one_hot * np.log(y_pred + self._eps)) / m
+          # Language Model
+          if self.task == "language_model":
+              B, T, V = y_pred.shape # (batch_size, seq_len, vocab_size)
+
+              data_loss = -np.mean(np.log(y_pred[np.arange(B)[:, None], np.arange(T), y_true] + self._eps))
+
+          elif self.task == "classification":
+              # data_loss = -1 * np.sum(one_hot * np.log(y_pred + self._eps)) / m
+              data_loss = -np.mean(np.log(y_pred[np.arange(m), y_true] + self._eps))
+
+          else:
+              raise Exception("Invalid model task")
+
         elif self.loss_type == "mse":
           # 1/m * ∑ ((y_pred - y_true)^2)
+          one_hot = self._one_hot_encoding(y_true)  # shape: (num_classes, N)
           data_loss = np.mean((y_pred - one_hot) ** 2)
         else:
           raise Exception("Invalid loss function")
@@ -315,14 +350,17 @@ class NeuralNetwork:
     # Converts final layer activation to predicted class labels
     @staticmethod
     def _decode_output(output):
-      if output.shape[1] == 1:  # Binary classification
-          return (output > 0.5).astype(int).flatten()
-      else:  # Multi-class (softmax)
-          return np.argmax(output, axis=1)
+        if output.ndim == 3:
+            # language model: (batch, seq_len, vocab_size) -> (batch, seq_len)
+            return np.argmax(output, axis=-1)
+        if output.shape[1] == 1: # Binary classification
+            return (output > 0.5).astype(int).flatten()
+        # Multi-class (softmax)
+        return np.argmax(output, axis=1)
 
     @staticmethod
     def shuffle_data(x, y):
-        perm = np.random.permutation(y.size)
+        perm = np.random.permutation(x.shape[0])
         x = x[perm]
         y = y[perm]
         return x, y
@@ -331,8 +369,8 @@ class NeuralNetwork:
     def set_seed(seed):
       np.random.seed(seed)
 
-
-    def check_gradient(self, X, y):
+    # need reconstruction to work with cnn and lm
+    """def check_gradient(self, X, y):
       assert X.shape[0] == y.size, f"X has {X.shape[0]} samples but y has {y.size}"
 
       # Use a small batch to avoid numerical issues
@@ -379,7 +417,7 @@ class NeuralNetwork:
               print(f"Layer {idx} W[{i},{j}]  Numerical: {grad_numerical:.10f}  Analytical: {grad_analytical:.10f}  Rel diff: {rel_diff[-1]:.2e}")
 
       self.lambda_ = original_lambda
-      return rel_diff
+      return rel_diff"""
 
     # Returns the feature maps of a specific convolutional layer
     def visualize_feature_maps(self, X, layer_index):
@@ -400,13 +438,21 @@ class NeuralNetwork:
     # loss_type - loss functions used
     # lambda_ - lambda used for preventing weights overfitting
     def gradient_descent(self, X, y, X_val=None, y_val=None, epochs=10, batch_size=1):
-      X = X.astype(np.float32)
+      # only cast if already float-like
+      # Prevent tokens (int) from breaking
+      if X.dtype.kind == 'f':
+          X = X.astype(np.float32)
+
+      # History - keep track of matrics and loss
       history = History()
 
+      # Optimizer step count
       optimizer_t = 0
 
+      # Number of epochs without val improvement until early stopping
       stopping_patience = 5
 
+      # Main model training loop
       for ep in range(epochs):
         predictions = []
         epoch_loss = 0
@@ -424,6 +470,7 @@ class NeuralNetwork:
           # get batch
           x_batch = x_shuffled[i:i + batch_size]
           y_batch = y_shuffled[i:i + batch_size]
+
           # feed model
           y_pred = self._forward(x_batch)
           self._backward(y_pred, y_batch)
@@ -442,9 +489,22 @@ class NeuralNetwork:
 
         predictions = np.concatenate(predictions)
 
-        history.add("epoch", ep+1)
+        # Update history - epoch num and loss
+        history.add("epoch", ep + 1)
         history.add("loss", epoch_loss)
-        history = self.calc_metrics(history, predictions, y_shuffled, metrics=["accuracy", "precision", "recall"])
+
+        # Calculate matrics and update history
+        if self.task == "language_model":
+            # token-level accuracy: predicted next token == actual next token
+            token_acc = np.mean(predictions == y_shuffled)
+            history.add("token_accuracy", token_acc)
+        else:
+            history = self.calc_metrics(
+                history, predictions,
+                y_shuffled[:len(predictions)],
+                metrics=["accuracy", "precision", "recall"]
+            )
+
 
         # Validation
         if X_val is not None and y_val is not None:
@@ -456,13 +516,25 @@ class NeuralNetwork:
              val_preds_list.append(self._forward(vb, training=False))
           val_pred = np.concatenate(val_preds_list, axis=0)
 
-          val_loss = self._compute_loss(val_pred, y_val)
-          val_acc = NeuralNetwork.accuracy(self._decode_output(val_pred), y_val)
+          # Calculate matrics and update history
+          if self.task == "language_model":
+              # Adjust val pred and y for correct shape (B, T, V) -> (B*T, V)
+              # flatten
+              B, T, V = val_pred.shape
+              vp_flat = val_pred.reshape(B * T, V)
+              vy_flat = y_val[:len(val_preds_list) * val_batch_size].reshape(-1)[:B * T]
+              val_loss = self._compute_loss(val_pred, y_val)
+              val_acc = np.mean(np.argmax(vp_flat, axis=-1) == vy_flat)
+          else:
+              val_loss = self._compute_loss(val_pred, y_val)
+              val_acc = NeuralNetwork.accuracy(self._decode_output(val_pred), y_val)
+
           history.add("val_loss", val_loss)
           history.add("val_accuracy", val_acc)
 
           history.progress()
 
+          # Early stopping check
           if len(history.history["val_loss"]) > 1:
             if history.history["val_loss"][-1] > history.history["val_loss"][-2]:
                 stopping_patience -= 1
@@ -480,25 +552,33 @@ class NeuralNetwork:
     ********************************************************** """
 
     # Configure training hyperparameters and optimization settings
-    def compile(self, loss_type="cross_entropy", optimizer="adam", lr=0.001, lambda_=0.0, beta1=0.9, beta2=0.999):
+    def compile(self, loss_type="cross_entropy", optimizer="adam", lr=0.001, lambda_=0.0, beta1=0.9, beta2=0.999, task="classification"):
         self.lr = lr
         self.lambda_ = lambda_
         self.beta1 = beta1
         self.beta2 = beta2
         self.loss_type = loss_type
         self.optimizer = optimizer
+        self.task = task
 
 
     # Train the model
     def fit(self, X, y, X_val=None, y_val=None, epochs=10, batch_size=1):
-        if X.shape[0] != y.size:
-            raise ValueError("Mismatch between samples and labels")
+        if X.shape[0] != y.shape[0]:
+            raise ValueError(f"X has {X.shape[0]} samples but y has {y.shape[0]}")
 
         # Find last layer - last outsize is num classes
-        for layer in reversed(self.layers):
-            if hasattr(layer, "out_size"):
-                self.num_classes = layer.out_size
-                break
+        if self.task == "classification":
+            for layer in reversed(self.layers):
+                if hasattr(layer, "out_size"):
+                    self.num_classes = layer.out_size
+                    break
+        elif self.task == "language_model":
+            for layer in reversed(self.layers):
+                if hasattr(layer, "vocab_size"):
+                    self.num_classes = layer.vocab_size
+                    break
+
         return self.gradient_descent(X, y, X_val=X_val, y_val=y_val, epochs=epochs, batch_size=batch_size)
 
 
@@ -521,3 +601,32 @@ class NeuralNetwork:
     def evaluate(self, X, y):
         predictions = self.predict(X)
         return NeuralNetwork.accuracy(predictions, y)
+
+    # Generate response for text (language model only)
+    def generate(self, prompt_ids, tokenizer, max_new_tokens=50, temperature=1.0, seq_len=16):
+        """
+        Autoregressively generate token ids from a prompt.
+
+        prompt_ids  : list of integer token ids (from tokenizer.encode)
+        temperature : > 1.0 = more random, < 1.0 = more focused, 1.0 = neutral
+        seq_len     : context window — must match what the model was trained on
+        """
+        ids = list(prompt_ids)
+
+        for _ in range(max_new_tokens):
+            # Take last seq_len tokens as context (or pad if shorter)
+            context = ids[-seq_len:]
+            x = np.array(context)[np.newaxis, :]  # (1, seq_len)
+
+            logits = self._forward(x, training=False)  # (1, seq_len, vocab_size)
+            last = logits[0, -1].astype(np.float64)  # (vocab_size,) — last position
+
+            # Temperature scaling then softmax
+            last -= last.max()  # numerical stability
+            last /= temperature
+            probs = np.exp(last) / np.sum(np.exp(last))
+
+            next_id = np.random.choice(len(probs), p=probs)
+            ids.append(int(next_id))
+
+        return tokenizer.decode(ids)

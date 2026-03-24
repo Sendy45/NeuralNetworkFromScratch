@@ -103,3 +103,34 @@ def split_train_validation(X, y, val_ratio=0.2):
     y_train = y[val_size:]
 
     return X_train, y_train, X_val, y_val
+
+
+
+"""****************************
+    Language model utils
+"****************************"""
+
+def create_sequences(data, seq_len):
+    x = []
+    y = []
+
+    for i in range(len(data) - seq_len):
+        x.append(data[i:i+seq_len])
+        y.append(data[i+1:i+seq_len+1])
+
+    return np.array(x), np.array(y)
+
+def get_batch(data, seq_len, batch_size):
+    x_batch = []
+    y_batch = []
+
+    for _ in range(batch_size):
+        i = np.random.randint(0, len(data) - seq_len - 1)
+
+        x = data[i:i+seq_len]
+        y = data[i+1:i+seq_len+1]
+
+        x_batch.append(x)
+        y_batch.append(y)
+
+    return np.array(x_batch), np.array(y_batch)

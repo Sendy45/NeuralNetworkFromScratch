@@ -31,12 +31,12 @@ from .layers import (
     GroupConv2D,
 
     Embedding,
+    RNN,
 )
 
 # tokenizer
-from tokenizer import (
+from .tokenizer import (
     Tokenizer,
-    Vocab,
 )
 # Model
 from .model import NeuralNetwork
@@ -82,6 +82,7 @@ __all__ = [
 
     # Language Layers
     "Embedding",
+    "RNN",
 
     # Utilities
     "History",
