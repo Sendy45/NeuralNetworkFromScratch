@@ -175,8 +175,7 @@ class NeuralNetwork:
 
     # Backward function - locates the origin of the loss and tweaks it
     def _backward(self, y_pred, y_true):
-      m = y_true.size
-
+      m = y_true.shape[0] if hasattr(y_true, 'shape') else y_true.size
 
       dA = self._loss_derivative(y_pred, y_true) / m
       dA = self.layers[-1]._backward(dA)
@@ -200,11 +199,21 @@ class NeuralNetwork:
             if self.task == "language_model":
                 B, T, V = y_pred.shape
 
-                d = np.zeros_like(y_pred)
+                # Trim y_true to match T in case of mismatch
+                y_true = y_true[:B, :T]  # <-- add this line
+                assert y_true.max() < V, f"Token id {y_true.max()} out of bounds for vocab size {V}"
 
-                d[np.arange(B)[:, None], np.arange(T), y_true] = -1.0 / (
-                        y_pred[np.arange(B)[:, None], np.arange(T), y_true] + self._eps
-                )
+                # Flatten batch and time
+                y_pred_flat = y_pred.reshape(B * T, V)  # (B*T, V)
+                y_true_flat = y_true.reshape(B * T)  # (B*T,)
+
+                # Gradient
+                d = np.zeros_like(y_pred_flat)    # (B*T, V)
+
+                d[np.arange(B*T), y_true_flat] = -1.0 / (y_pred_flat[np.arange(B*T), y_true_flat] + self._eps)
+
+                # Reshape back
+                d = d.reshape(B, T, V)
 
                 return d
             # (B, V)
@@ -233,6 +242,9 @@ class NeuralNetwork:
           # Language Model
           if self.task == "language_model":
               B, T, V = y_pred.shape # (batch_size, seq_len, vocab_size)
+
+              # Trim y_true to match T in case of mismatch
+              y_true = y_true[:B, :T]  # <-- add this line
 
               data_loss = -np.mean(np.log(y_pred[np.arange(B)[:, None], np.arange(T), y_true] + self._eps))
 
@@ -360,8 +372,14 @@ class NeuralNetwork:
 
     @staticmethod
     def shuffle_data(x, y):
-        perm = np.random.permutation(x.shape[0])
-        x = x[perm]
+        # Handle (src, trg) format for X
+        if isinstance(x, tuple):
+            perm = np.random.permutation(x[0].shape[0])
+            x = tuple(arr[perm] for arr in x)
+        else:
+            perm = np.random.permutation(x.shape[0])
+            x = x[perm]
+
         y = y[perm]
         return x, y
 
@@ -438,10 +456,6 @@ class NeuralNetwork:
     # loss_type - loss functions used
     # lambda_ - lambda used for preventing weights overfitting
     def gradient_descent(self, X, y, X_val=None, y_val=None, epochs=10, batch_size=1):
-      # only cast if already float-like
-      # Prevent tokens (int) from breaking
-      if X.dtype.kind == 'f':
-          X = X.astype(np.float32)
 
       # History - keep track of matrics and loss
       history = History()
@@ -459,7 +473,12 @@ class NeuralNetwork:
 
         x_shuffled, y_shuffled = NeuralNetwork.shuffle_data(X, y)
 
-        n_samples = X.shape[0]
+
+        # Handle (src, trg) format - LM
+        if isinstance(x_shuffled, tuple):
+            n_samples = X[0].shape[0]
+        else:
+            n_samples = X.shape[0]
 
         # Batches
         # tqdm - loading animation
@@ -468,7 +487,12 @@ class NeuralNetwork:
           optimizer_t += 1
 
           # get batch
-          x_batch = x_shuffled[i:i + batch_size]
+          # Handle (src, trg) format - LM
+          if isinstance(x_shuffled, tuple):
+              x_batch = tuple(arr[i:i + batch_size] for arr in x_shuffled)
+          else:
+              x_batch = x_shuffled[i:i + batch_size]
+
           y_batch = y_shuffled[i:i + batch_size]
 
           # feed model
@@ -564,8 +588,7 @@ class NeuralNetwork:
 
     # Train the model
     def fit(self, X, y, X_val=None, y_val=None, epochs=10, batch_size=1):
-        if X.shape[0] != y.shape[0]:
-            raise ValueError(f"X has {X.shape[0]} samples but y has {y.shape[0]}")
+
 
         # Find last layer - last outsize is num classes
         if self.task == "classification":
@@ -614,19 +637,32 @@ class NeuralNetwork:
         ids = list(prompt_ids)
 
         for _ in range(max_new_tokens):
-            # Take last seq_len tokens as context (or pad if shorter)
             context = ids[-seq_len:]
+
+            # Pad to seq_len if needed
+            if len(context) < seq_len:
+                pad_id = tokenizer.special_tokens.get("<PAD>", 0)
+                context = [pad_id] * (seq_len - len(context)) + context
+
             x = np.array(context)[np.newaxis, :]  # (1, seq_len)
 
             logits = self._forward(x, training=False)  # (1, seq_len, vocab_size)
             last = logits[0, -1].astype(np.float64)  # (vocab_size,) — last position
 
             # Temperature scaling then softmax
-            last -= last.max()  # numerical stability
-            last /= temperature
+            last /= temperature  # scale first
+            last -= last.max()  # then stabilize
             probs = np.exp(last) / np.sum(np.exp(last))
 
-            next_id = np.random.choice(len(probs), p=probs)
+            next_id = self._top_k_sample(probs, k=10)
             ids.append(int(next_id))
 
         return tokenizer.decode(ids)
+
+    def _top_k_sample(self, probs, k=10):
+        # Zero out everything except top k probabilities
+        top_k_indices = np.argsort(probs)[-k:]
+        filtered = np.zeros_like(probs)
+        filtered[top_k_indices] = probs[top_k_indices]
+        filtered /= filtered.sum()  # renormalize
+        return np.random.choice(len(filtered), p=filtered)

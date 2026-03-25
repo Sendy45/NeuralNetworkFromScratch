@@ -31,7 +31,9 @@ from .layers import (
     GroupConv2D,
 
     Embedding,
+    PositionEmbedding,
     RNN,
+    Seq2Seq,
 )
 
 # tokenizer
@@ -82,7 +84,9 @@ __all__ = [
 
     # Language Layers
     "Embedding",
+    "PositionEmbedding",
     "RNN",
+    "Seq2Seq",
 
     # Utilities
     "History",

@@ -17,7 +17,10 @@ from .BatchNorm2D import BatchNorm2D
 from .GroupConv2D import GroupConv2D
 
 from .Embedding import Embedding
+from .PositionEmbedding import PositionEmbedding
 from .RNN import RNN
+from .Seq2Seq import Seq2Seq
+
 
 
 __ALL__ = [
@@ -45,5 +48,7 @@ __ALL__ = [
     GroupConv2D,
 
     Embedding,
+    PositionEmbedding,
     RNN,
+    Seq2Seq,
 ]

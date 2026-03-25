@@ -12,8 +12,16 @@ class Tokenizer:
         self.merges = {}  # (int, int) -> int
 
         # Bank of special tokens, goes both ways
-        self.special_tokens = {}  # str -> int
-        self.inverse_special_tokens = {}  # int -> str
+        self.special_tokens = {
+            "<PAD>": 0,
+            "<START>": 1,
+            "<END>": 2,
+            "<UNK>": 3,
+            "<CLS>": 4,
+            "<SEP>": 5,
+        } # str -> int
+
+        self.inverse_special_tokens = {v: k for k, v in self.special_tokens.items()} # int -> str
 
         # vocab - all tokens and ids - used for decoding
         self.vocab = self._build_vocab()  # int -> bytes
