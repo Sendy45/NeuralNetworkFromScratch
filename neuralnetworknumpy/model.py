@@ -164,21 +164,21 @@ class NeuralNetwork:
     ********************************************************** """
 
     # Forward function - feed input and get prediction
-    def _forward(self, X, training=True):
+    def forward(self, X, training=True):
         # Z = W * A + B
         # A - output (after activation function)
         # Also next layer input
         for layer in self.layers:
-            X = layer._forward(X, training=training)
+            X = layer.forward(X, training=training)
         return X
 
 
     # Backward function - locates the origin of the loss and tweaks it
-    def _backward(self, y_pred, y_true):
+    def backward(self, y_pred, y_true):
       m = y_true.shape[0] if hasattr(y_true, 'shape') else y_true.size
 
       dA = self._loss_derivative(y_pred, y_true) / m
-      dA = self.layers[-1]._backward(dA)
+      dA = self.layers[-1].backward(dA)
 
       # Remaining layers
       # Backpropagation: iterate layers in reverse order (from last to first)
@@ -186,7 +186,7 @@ class NeuralNetwork:
       for layer in reversed(self.layers[:-1]):
           # dA = ∂J/∂A_L
           # This is the derivative of the loss w.r.t. the network output
-          dA = layer._backward(dA)
+          dA = layer.backward(dA)
 
 
     # Loss derivative - for the last layer based on the loss-type
@@ -285,10 +285,10 @@ class NeuralNetwork:
     # Force weights to be small but not zero (w = 0 -> no impact on the model)
     # Beta1 = momentum factor
     # Beta2 = RSMprop factor
-    def _update(self, optimizer_t):
+    def update(self, optimizer_t):
 
       for layer in self.layers:
-          layer._update(self.lambda_, self.lr, self.beta1, self.beta2, self._eps, self.optimizer, optimizer_t)
+          layer.update(self.lambda_, self.lr, self.beta1, self.beta2, self._eps, self.optimizer, optimizer_t)
 
     """ **********************************************************
     Metrics
@@ -400,8 +400,8 @@ class NeuralNetwork:
       self.lambda_ = 0.0
       epsilon = 1e-5  # smaller epsilon can help
 
-      y_pred = self._forward(X, training=False)
-      self._backward(y_pred, y)
+      y_pred = self.forward(X, training=False)
+      self.backward(y_pred, y)
 
       # Snapshot ALL analytical gradients before any weight perturbation
       analytical_grads = {}
@@ -418,11 +418,11 @@ class NeuralNetwork:
               grad_analytical = analytical_grads[idx][i, j]
 
               layer.W[i, j] = W_orig + epsilon
-              y_pred = self._forward(X, training=False)
+              y_pred = self.forward(X, training=False)
               loss_plus = self._compute_loss(y_pred, y)
 
               layer.W[i, j] = W_orig - epsilon
-              y_pred = self._forward(X, training=False)
+              y_pred = self.forward(X, training=False)
               loss_minus = self._compute_loss(y_pred, y)
 
               grad_numerical = (loss_plus - loss_minus) / (2 * epsilon)
@@ -441,7 +441,7 @@ class NeuralNetwork:
     def visualize_feature_maps(self, X, layer_index):
         A = X
         for idx, layer in enumerate(self.layers):
-            A = layer._forward(A, training=False)
+            A = layer.forward(A, training=False)
             if idx == layer_index:
                 # feature maps shape: (m, H, W, C_out)
                 return A
@@ -496,9 +496,9 @@ class NeuralNetwork:
           y_batch = y_shuffled[i:i + batch_size]
 
           # feed model
-          y_pred = self._forward(x_batch)
-          self._backward(y_pred, y_batch)
-          self._update(optimizer_t)
+          y_pred = self.forward(x_batch)
+          self.backward(y_pred, y_batch)
+          self.update(optimizer_t)
 
           # Monitor loss - epoch_loss = Avg(batches_loss)
           predictions.append(self._decode_output(y_pred))
@@ -535,9 +535,22 @@ class NeuralNetwork:
           # Divide into batches to save computing power
           val_batch_size = 256
           val_preds_list = []
-          for vi in range(0, len(X_val), val_batch_size):
-             vb = X_val[vi:vi + val_batch_size]
-             val_preds_list.append(self._forward(vb, training=False))
+
+          # Support tuple X_val for Seq2Seq (src, trg) format
+          if isinstance(X_val, tuple):
+            n_val = X_val[0].shape[0]
+          else:
+            n_val = len(X_val)
+
+          for vi in range(0, n_val, val_batch_size):
+              # Support tuple X_val for Seq2Seq (src, trg) format
+              if isinstance(X_val, tuple):
+                vb = tuple(arr[vi:vi + val_batch_size] for arr in X_val)
+              else:
+                vb = X_val[vi:vi + val_batch_size]
+
+              val_preds_list.append(self.forward(vb, training=False))
+
           val_pred = np.concatenate(val_preds_list, axis=0)
 
           # Calculate matrics and update history
@@ -617,7 +630,7 @@ class NeuralNetwork:
 
     # Return raw output activations (probabilities or scores)
     def predict_proba(self, X):
-        return self._forward(X, training=False)
+        return self.forward(X, training=False)
 
 
     # Evaluate model performance (accuracy) on given dataset
@@ -625,6 +638,9 @@ class NeuralNetwork:
         predictions = self.predict(X)
         return NeuralNetwork.accuracy(predictions, y)
 
+    """*****************************
+        wrong implementation
+    *****************************"""
     # Generate response for text (language model only)
     def generate(self, prompt_ids, tokenizer, max_new_tokens=50, temperature=1.0, seq_len=16):
         """
@@ -646,7 +662,7 @@ class NeuralNetwork:
 
             x = np.array(context)[np.newaxis, :]  # (1, seq_len)
 
-            logits = self._forward(x, training=False)  # (1, seq_len, vocab_size)
+            logits = self.forward(x, training=False)  # (1, seq_len, vocab_size)
             last = logits[0, -1].astype(np.float64)  # (vocab_size,) — last position
 
             # Temperature scaling then softmax

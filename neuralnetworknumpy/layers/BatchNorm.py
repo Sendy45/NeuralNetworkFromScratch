@@ -41,7 +41,7 @@ class BatchNorm(Layer):
         # Running variance initialized to 1
         self.running_var = np.ones((1, input_size), dtype=np.float32)
 
-    def _forward(self, A_prev, training=True):
+    def forward(self, A_prev, training=True):
         # A_prev shape: (batch_size, features)
 
         # Lazy initialization (build on first forward pass)
@@ -88,7 +88,7 @@ class BatchNorm(Layer):
 
         return self.A
 
-    def _backward(self, dA, skip_activation=False):
+    def backward(self, dA, skip_activation=False):
         # dA shape: (batch_size, features)
         # Gradient of loss w.r.t. output of BatchNorm
 
@@ -135,7 +135,7 @@ class BatchNorm(Layer):
 
         return dX
 
-    def _update(self, lambda_, lr, beta1, beta2, eps, optimizer, t):
+    def update(self, lambda_, lr, beta1, beta2, eps, optimizer, t):
         # Simple SGD update (no regularization typically applied to γ, β)
         self.gamma -= lr * self.dgamma
         self.beta -= lr * self.dbeta

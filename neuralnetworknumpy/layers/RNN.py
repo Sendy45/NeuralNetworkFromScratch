@@ -42,7 +42,7 @@ class RNN(Layer):
     # RNN preserves past weights and calcs via the hidden state
     # h_t - current hidden state, is the result of former h_t-1, and current input x_t
     # this way, RNN remembers past inputs - but is suffering from vanishing gradient
-    def _forward(self, emb, h_init=None, training=None):
+    def forward(self, emb, h_init=None, training=None):
         B, T, D = emb.shape # (batch_size, seq_len, emb_dim)
         H = self.hidden_size
 
@@ -84,7 +84,7 @@ class RNN(Layer):
         logits = h_stack @ self.W_hy + self.b_y # (B, T, V)
         return logits
 
-    def _backward(self, dlogits):
+    def backward(self, dlogits):
         B, T, _ = dlogits.shape # (batch_size, seq_len, vocab_size OR hidden_size)
         H = self.hidden_size # hidden_state
         D = self.embed_dim # embedding_dims
@@ -126,7 +126,7 @@ class RNN(Layer):
                 dh = dlogits_t @ self.W_hy.T  # (B, H)
             else:
                 # Seq2Seq mode — dlogits is already dh (gradient w.r.t hidden state)
-                # passed directly from Dense._backward in Seq2Seq
+                # passed directly from Dense.backward in Seq2Seq
                 dh = dlogits[:, t, :]  # (B, H)
 
             dh += dh_next  # add future gradient
@@ -169,7 +169,7 @@ class RNN(Layer):
         return demb
 
 
-    def _update(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
+    def update(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
 
         # --- L2 regularization (skipped for adamW, handled via weight decay instead) ---
         if optimizer == "adamW":

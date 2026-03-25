@@ -69,7 +69,7 @@ class Conv2D(Layer):
         else:
             self.W = np.random.randn(C_out, K_h, K_w, C_in).astype(np.float32) * 0.01
 
-    def _forward(self, A_prev, training=None):
+    def forward(self, A_prev, training=None):
         # A_prev shape: (m, H, W, C_in) - row-major, as Conv2D expects
         # Build layer if it's its first run
         if self.W is None:
@@ -150,7 +150,7 @@ class Conv2D(Layer):
         self.A = self.Z  # needed by NeuralNetwork._compute_loss reg term
         return self.Z
 
-    def _backward(self, dZ, skip_activation=False):
+    def backward(self, dZ, skip_activation=False):
 
         # P_h, P_w - padding height and width
         # S_h, S_w - strides height and width
@@ -211,7 +211,7 @@ class Conv2D(Layer):
         return dA_pad[:, h_sl, w_sl, :]
 
 
-    def _update(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
+    def update(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
 
         if optimizer == "adamW":
             dw = self.dW

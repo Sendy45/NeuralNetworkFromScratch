@@ -14,14 +14,14 @@ class Flatten(Layer):
 
     # Reshape 4D tensors into 2D
     # (m, H, W, C) -> (m, H*W*C)
-    def _forward(self, A_prev, training=None):
+    def forward(self, A_prev, training=None):
         self.input_shape = A_prev.shape
         return A_prev.reshape(A_prev.shape[0], -1)
 
     # Reshape 2D tensors into 4D
     # (m, H*W*C) -> (m, H, W, C)
-    def _backward(self, dA, skip_activation=False):
+    def backward(self, dA, skip_activation=False):
         return dA.reshape(self.input_shape)
 
-    def _update(self, *args, **kwargs):
+    def update(self, *args, **kwargs):
         pass

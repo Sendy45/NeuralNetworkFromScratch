@@ -16,7 +16,7 @@ class GroupConv2D(Conv2D):
         Weight shape: (G, C_out/G, K_h, K_w, C_in/G)
           [groups, filters_per_group, kernel_h, kernel_w, in_channels_per_group]
 
-        All optimiser states and _update() are inherited from Conv2D unchanged -
+        All optimiser states and update() are inherited from Conv2D unchanged -
         they work on any W shape because they use element wise operations.
     """
     def __init__(self, filters, kernel_size, groups=1, strides:tuple=(1, 1), padding:str="valid", kernel_initializer: str=None):
@@ -63,7 +63,7 @@ class GroupConv2D(Conv2D):
             self.W = np.random.randn(G, Cg_out, K_h, K_w, Cg_in).astype(np.float32) * 0.01
 
 
-    def _forward(self, A_prev, training=None):
+    def forward(self, A_prev, training=None):
         # A_prev shape: (m, H, W, C_in) - row-major, as Conv2D expects
         # Build layer if it's its first run
         if self.W is None:
@@ -115,7 +115,7 @@ class GroupConv2D(Conv2D):
 
         # Multiply patch by filter weights
         # then sum over K_h and K_w - channels stay independent
-        # Store contiguous copy of patches for use in _backward
+        # Store contiguous copy of patches for use in backward
         self.patches = np.ascontiguousarray(patches).reshape(N, Ks, C_in)
 
         # Split channels into groups and reshape for batched matmul:
@@ -143,7 +143,7 @@ class GroupConv2D(Conv2D):
         self.A = self.Z  # needed by NeuralNetwork._compute_loss reg term
         return self.Z
 
-    def _backward(self, dZ, skip_activation=False):
+    def backward(self, dZ, skip_activation=False):
 
         G = self.groups
 

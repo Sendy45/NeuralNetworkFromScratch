@@ -49,7 +49,7 @@ class Seq2Seq(Layer):
         self.out_softmax = Softmax()
 
 
-    def _forward(self, X, training=True):
+    def forward(self, X, training=True):
         # When called from NeuralNetwork, y is packed with X as a tuple
         if isinstance(X, tuple):
             X, y = X
@@ -65,8 +65,8 @@ class Seq2Seq(Layer):
         # --------------
         # Encoder
         # --------------
-        enc_emb = self.encoder_embedding._forward(X, training)   # (B, T_in, E)
-        enc_h   = self.encoder._forward(enc_emb)             # (B, T_in, H)
+        enc_emb = self.encoder_embedding.forward(X, training)   # (B, T_in, E)
+        enc_h   = self.encoder.forward(enc_emb)             # (B, T_in, H)
         h       = enc_h[:, -1, :]                            # (B, H) - context vector
 
         # Storage for backward pass
@@ -91,23 +91,23 @@ class Seq2Seq(Layer):
             dec_input_ids = np.zeros((B, T_out), dtype=np.int32)
 
         # Embed full decoder input sequence
-        dec_emb = self.decoder_embedding._forward(dec_input_ids, training)  # (B, T_out, E)
+        dec_emb = self.decoder_embedding.forward(dec_input_ids, training)  # (B, T_out, E)
 
         # Run decoder RNN on full sequence
-        dec_h = self.decoder._forward(dec_emb, h_init=h)  # (B, T_out, H)
+        dec_h = self.decoder.forward(dec_emb, h_init=h)  # (B, T_out, H)
 
         # Project all timesteps at once
         # Flatten dec_h for Dense layer
         dec_h_flat = dec_h.reshape(B * T_out, self.hidden_size)  # (B*T, H)
-        logits_flat = self.out_proj._forward(dec_h_flat)  # (B*T, V)
-        probs_flat = self.out_softmax._forward(logits_flat)  # (B*T, V)
+        logits_flat = self.out_proj.forward(dec_h_flat)  # (B*T, V)
+        probs_flat = self.out_softmax.forward(logits_flat)  # (B*T, V)
         self.probs_flat = probs_flat.copy()
 
         self.A = probs_flat.reshape(B, T_out, -1)  # (B, T_out, V)
         return self.A
 
 
-    def _backward(self, dA):
+    def backward(self, dA):
         """
         dA : (B, T_out, V)  gradient from loss w.r.t. logits
         Returns gradient w.r.t. encoder input embeddings (passed to enc_embedding)
@@ -118,33 +118,33 @@ class Seq2Seq(Layer):
         # flatten for Dense and Softmax layers
         dlogits_flat = dA.reshape(B * T_out, V)  # (B*T, V)
         #self.out_softmax.A = self.probs_flat
-        dlogits_flat = self.out_softmax._backward(dlogits_flat)  # (B*T, V)
+        dlogits_flat = self.out_softmax.backward(dlogits_flat)  # (B*T, V)
 
         # Output projection backward
-        dh_flat = self.out_proj._backward(dlogits_flat)  # (B*T, H)
+        dh_flat = self.out_proj.backward(dlogits_flat)  # (B*T, H)
         # Restore shape for RNN
         dh = dh_flat.reshape(B, T_out, self.hidden_size)  # (B, T_out, H)
 
         # Decoder RNN backward (full sequence)
-        ddec_emb = self.decoder._backward(dh)  # (B, T_out, E)
+        ddec_emb = self.decoder.backward(dh)  # (B, T_out, E)
 
         # Decoder embedding backward
-        self.decoder_embedding._backward(ddec_emb)
+        self.decoder_embedding.backward(ddec_emb)
 
         # Encoder backward
         dh_enc = np.zeros((B, self.enc_emb.shape[1], self.hidden_size)) # (B, T_in, H)
         dh_enc[:, -1, :] = self.decoder.dh_init  # grad from decoder init
-        denc_emb = self.encoder._backward(dh_enc)
-        self.encoder_embedding._backward(denc_emb)
+        denc_emb = self.encoder.backward(dh_enc)
+        self.encoder_embedding.backward(denc_emb)
 
 
         return np.zeros_like(self.enc_emb)     # no upstream layer before embeddings
 
     # ------------------------------------------------------------------
 
-    def _update(self, *args, **kwargs):
-        self.encoder_embedding._update(*args, **kwargs)
-        self.decoder_embedding._update(*args, **kwargs)
-        self.encoder._update(*args, **kwargs)
-        self.decoder._update(*args, **kwargs)
-        self.out_proj._update(*args, **kwargs)
+    def update(self, *args, **kwargs):
+        self.encoder_embedding.update(*args, **kwargs)
+        self.decoder_embedding.update(*args, **kwargs)
+        self.encoder.update(*args, **kwargs)
+        self.decoder.update(*args, **kwargs)
+        self.out_proj.update(*args, **kwargs)

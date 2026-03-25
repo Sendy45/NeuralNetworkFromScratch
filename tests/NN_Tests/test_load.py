@@ -10,7 +10,7 @@ from neuralnetworknumpy import NeuralNetwork, Scaler
 
 # ----------------------------
 
-model = NeuralNetwork.load("model.h5.npz")
+model = NeuralNetwork.load("model.h5.pkl")
 
 print("Model loaded successfully")
 model.summary()
@@ -30,7 +30,7 @@ test_X = scaler.fit_transform(test_X)
 
 # transpose to match network format
 
-test_X = test_X.T
+test_X = test_X
 
 print("Test shape:", test_X.shape)
 
@@ -45,9 +45,10 @@ correct = 0
 
 for i in range(num_tests):
 
-    idx = np.random.randint(test_X.shape[1])
 
-    x = test_X[:, idx:idx+1]
+    idx = np.random.randint(test_X.shape[0])  # random sample index
+
+    x = test_X[idx:idx + 1]  # shape (1, 784)
     y_true = test_y[idx]
 
     y_pred = model.predict(x)

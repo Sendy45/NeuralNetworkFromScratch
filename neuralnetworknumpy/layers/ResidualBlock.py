@@ -13,47 +13,47 @@ class ResidualBlock(Layer):
         self.layers = layers         # main path
         self.projection = projection # optional shortcut (Conv1x1)
 
-    def _forward(self, A_prev, training=None):
+    def forward(self, A_prev, training=None):
         self.A_prev = A_prev
 
         out = A_prev
 
         # Find the F(x), main output
         for layer in self.layers:
-            out = layer._forward(out, training=training)
+            out = layer.forward(out, training=training)
 
         shortcut_out = A_prev
         # Handle projection if needed
         # output and shortcut_out shapes not aligning due to strides
         if self.projection is not None:
-            shortcut_out = self.projection._forward(shortcut_out, training=training)
+            shortcut_out = self.projection.forward(shortcut_out, training=training)
 
         # output = F(x) + x
         self.Z = out + shortcut_out
         self.A = self.Z
         return self.Z
 
-    def _backward(self, dZ):
+    def backward(self, dZ):
         dZ_main = dZ
 
         # Main path
         for layer in reversed(self.layers):
-            dZ_main = layer._backward(dZ_main)
+            dZ_main = layer.backward(dZ_main)
 
         # Shortcut path
         if self.projection is not None:
-            dZ_short = self.projection._backward(dZ)
+            dZ_short = self.projection.backward(dZ)
         else:
             dZ_short = dZ
 
         return dZ_main + dZ_short
 
-    def _update(self, *args):
+    def update(self, *args):
         # Update each layer inside of block
         for layer in self.layers:
-            layer._update(*args)
+            layer.update(*args)
 
         # Update projection conv2d (1x1 conv)
         if self.projection is not None:
-            self.projection._update(*args)
+            self.projection.update(*args)
 

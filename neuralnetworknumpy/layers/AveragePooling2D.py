@@ -26,7 +26,7 @@ class AveragePooling2D(Layer):
         else:  # "valid"
             self._padding_val = (0, 0)
 
-    def _forward(self, A_prev, training=None):
+    def forward(self, A_prev, training=None):
         # A_prev shape: (m, H, W, C_in) - row-major, as MaxPooling2D expects
         # Build layer if it's its first run
         if self._padding_val is None:
@@ -82,7 +82,7 @@ class AveragePooling2D(Layer):
         self.A = self.Z  # needed by NeuralNetwork._compute_loss reg term
         return self.Z
 
-    def _backward(self, dA, skip_activation=False):
+    def backward(self, dA, skip_activation=False):
 
         # P_h, P_w - padding height and width
         # S_h, S_w - strides height and width
@@ -149,5 +149,5 @@ class AveragePooling2D(Layer):
         return dA_pad[:, h_sl, w_sl, :]
 
 
-    def _update(self, *args, **kwargs):
+    def update(self, *args, **kwargs):
         pass

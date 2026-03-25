@@ -62,7 +62,7 @@ class Dense(Layer):
       else:
           self.W = np.random.randn(self.in_size, self.out_size).astype(np.float32) * 0.01
 
-  def _forward(self, A_prev, training=None):
+  def forward(self, A_prev, training=None):
       if self.W is None:
           self.build(A_prev.shape[1])
 
@@ -72,7 +72,7 @@ class Dense(Layer):
 
       return self.Z
 
-  def _backward(self, dA, skip_activation=False):
+  def backward(self, dA, skip_activation=False):
 
       # dW_i = dZ_i · A_{i}^T
       # Gradient of the loss w.r.t. weights of layer i
@@ -87,7 +87,7 @@ class Dense(Layer):
       return dA @ self.W.T
 
 
-  def _update(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
+  def update(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
 
       if optimizer == "adamW":
           dw = self.dW # pure gradient

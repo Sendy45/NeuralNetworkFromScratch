@@ -15,7 +15,7 @@ class Embedding(Layer):
         self.mW = np.zeros_like(self.W)
         self.vW = np.zeros_like(self.W)
 
-    def _forward(self, X, training=None):
+    def forward(self, X, training=None):
         if self.W is None:
             self.build()
         # cache for backward
@@ -23,7 +23,7 @@ class Embedding(Layer):
         self.A = self.W[X]  # (batch, seq_len, embed_dim)
         return self.A
 
-    def _backward(self, dout):
+    def backward(self, dout):
         # Put gradient per weight back in its position
         # shape - (vocab_size, embed_size)
         # using add.at in case of token appearing more then once (like +=)
@@ -32,7 +32,7 @@ class Embedding(Layer):
 
         return None # no gradient for integer inputs
 
-    def _update(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
+    def update(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
 
         if optimizer == "adamW":
             dw = self.dW  # pure gradient

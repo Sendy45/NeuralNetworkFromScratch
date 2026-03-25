@@ -29,7 +29,7 @@ class PositionEmbedding(Layer):
 
 
 
-    def _forward(self, X, training=None):
+    def forward(self, X, training=None):
         # X: (B, T, D)
         B, T, D = X.shape
 
@@ -44,7 +44,7 @@ class PositionEmbedding(Layer):
         self.A = X + self.P[:T]  # (batch, seq_len, embed_dim)
         return self.A
 
-    def _backward(self, dA):
+    def backward(self, dA):
         # Gradient flows unchanged to embedding
         # dA = ∂J / ∂A = 1
         dX = dA
@@ -57,7 +57,7 @@ class PositionEmbedding(Layer):
 
         return dX
 
-    def _update(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
+    def date(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
 
         if optimizer == "adamW":
             dP = self.dP  # pure gradient

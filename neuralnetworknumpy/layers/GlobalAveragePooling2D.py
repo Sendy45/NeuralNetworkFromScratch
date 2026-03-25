@@ -14,7 +14,7 @@ class GlobalAveragePooling2D(Layer):
     def __init__(self):
         super().__init__()
 
-    def _forward(self, A_prev, training=None):
+    def forward(self, A_prev, training=None):
 
         self.A_prev = A_prev
 
@@ -24,7 +24,7 @@ class GlobalAveragePooling2D(Layer):
         self.A = self.Z  # needed by NeuralNetwork._compute_loss reg term
         return self.Z
 
-    def _backward(self, dA, skip_activation=False):
+    def backward(self, dA, skip_activation=False):
 
         # Output shape
         m, H, W, C = self.A_prev.shape
@@ -37,5 +37,5 @@ class GlobalAveragePooling2D(Layer):
         return dA_prev
 
 
-    def _update(self, *args, **kwargs):
+    def update(self, *args, **kwargs):
         pass

@@ -33,15 +33,15 @@ class Layer:
     self.Z = None
 
   # Forward and backward are abstract methods — override in subclasses
-  def _forward(self, A_prev, training=None):
+  def forward(self, A_prev, training=None):
     raise NotImplementedError
 
-  def _backward(self, dA):
+  def backward(self, dA):
     raise NotImplementedError
 
   # Update model parameters to enable learning
   # handles optimizers
-  def _update(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
+  def update(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
     raise NotImplementedError
 
 

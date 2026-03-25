@@ -17,17 +17,17 @@ class DepthwiseSeparableConv2D(Layer):
         self.pointwise = Conv2D(filters, 1)
 
 
-    def _forward(self, A_prev, training=None):
+    def forward(self, A_prev, training=None):
         self.A_prev = A_prev
-        x = self.depthwise._forward(A_prev, training=training)
-        return self.pointwise._forward(x, training=training)
+        x = self.depthwise.forward(A_prev, training=training)
+        return self.pointwise.forward(x, training=training)
 
-    def _backward(self, dZ, skip_activation=False):
+    def backward(self, dZ, skip_activation=False):
 
-        dA = self.pointwise._backward(dZ)
-        return self.depthwise._backward(dA)
+        dA = self.pointwise.backward(dZ)
+        return self.depthwise.backward(dA)
 
 
-    def _update(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
-        self.depthwise._update(lambda_, lr, beta1, beta2, _eps, optimizer, t)
-        self.pointwise._update(lambda_, lr, beta1, beta2, _eps, optimizer, t)
+    def update(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
+        self.depthwise.update(lambda_, lr, beta1, beta2, _eps, optimizer, t)
+        self.pointwise.update(lambda_, lr, beta1, beta2, _eps, optimizer, t)

@@ -15,7 +15,7 @@ class Dropout(Layer):
     self.rate = rate  # probability of dropping a unit
     self.mask = None
 
-  def _forward(self, A_prev, training=True):
+  def forward(self, A_prev, training=True):
     if not training:
       # No dropout during inference
       self.mask = np.ones_like(A_prev)
@@ -29,11 +29,11 @@ class Dropout(Layer):
 
     return self.A
 
-  def _backward(self, dA, skip_activation=False):
+  def backward(self, dA, skip_activation=False):
     # Backprop only through active neurons
     dA_prev = (dA * self.mask) / (1 - self.rate)
     return dA_prev
 
-  def _update(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
+  def update(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
     # Dropout layer has no trainable parameters
     pass

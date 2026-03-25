@@ -25,14 +25,14 @@ class SpatiallySeparableConv2D(Layer):
         self.filter1 = Conv2D(filters, (k, 1), strides=strides, padding=padding)
         self.filter2 = Conv2D(filters, (1, k), strides=(1, 1), padding=padding)
 
-    def _forward(self, A_prev, training=None):
-        x = self.filter1._forward(A_prev, training=training)
-        return self.filter2._forward(x, training=training)
+    def forward(self, A_prev, training=None):
+        x = self.filter1.forward(A_prev, training=training)
+        return self.filter2.forward(x, training=training)
 
-    def _backward(self, dZ, skip_activation=False):
-        dA = self.filter2._backward(dZ)
-        return self.filter1._backward(dA)
+    def backward(self, dZ, skip_activation=False):
+        dA = self.filter2.backward(dZ)
+        return self.filter1.backward(dA)
 
-    def _update(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
-        self.filter1._update(lambda_, lr, beta1, beta2, _eps, optimizer, t)
-        self.filter2._update(lambda_, lr, beta1, beta2, _eps, optimizer, t)
+    def update(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
+        self.filter1.update(lambda_, lr, beta1, beta2, _eps, optimizer, t)
+        self.filter2.update(lambda_, lr, beta1, beta2, _eps, optimizer, t)
