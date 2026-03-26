@@ -33,6 +33,8 @@ from .layers import (
     Embedding,
     PositionEmbedding,
     RNN,
+    GRU,
+    LSTM,
     Seq2Seq,
 )
 
@@ -86,6 +88,8 @@ __all__ = [
     "Embedding",
     "PositionEmbedding",
     "RNN",
+    "GRU",
+    "LSTM",
     "Seq2Seq",
 
     # Utilities

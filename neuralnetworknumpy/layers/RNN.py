@@ -164,7 +164,7 @@ class RNN(Layer):
         """ seq2seq """
         # Expose gradient w.r.t. the initial hidden state
         # so Seq2Seq can pass it back to the encoder
-        self.dh_init = dh_next  # (B, H)  — gradient w.r.t. h_init
+        self.dh_init = dh_next  # (B, H)  - gradient w.r.t. h_init
 
         return demb
 

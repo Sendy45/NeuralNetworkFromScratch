@@ -1,10 +1,17 @@
+from logging import raiseExceptions
+
 from .Layer import Layer
+from .GRU import GRU
 from .RNN import RNN
 from .Dense import Dense
 import numpy as np
 from .Embedding import Embedding
 from .Activation import Softmax
 
+LAYER_REGISTRY = {
+        "RNN": RNN,
+        "GRU": GRU,
+    }
 
 class Seq2Seq(Layer):
     """
@@ -25,25 +32,33 @@ class Seq2Seq(Layer):
         output   : (B, T_out, V)       logits
     """
 
-    def __init__(self, vocab_size, embed_dim, hidden_size):
+
+
+    def __init__(self, vocab_size, embed_dim, hidden_size, layer_type="RNN"):
         super().__init__()
         self.vocab_size = vocab_size
         self.embed_dim = embed_dim
         self.hidden_size = hidden_size
+
+        if layer_type not in LAYER_REGISTRY:
+            raise ValueError(f"Invalid layer_type '{layer_type}'. Choose from {list(LAYER_REGISTRY)}")
+
+        cell = LAYER_REGISTRY[layer_type]
 
         # --------------
         # Encoder
         # --------------
         # Reads source sequence
         self.encoder_embedding = Embedding(vocab_size, embed_dim)
-        self.encoder = RNN(embed_dim, hidden_size)
+        self.encoder = cell(embed_dim, hidden_size)
 
         # --------------
         # Decoder
         # --------------
         # Generates target sequence
         self.decoder_embedding = Embedding(vocab_size, embed_dim)
-        self.decoder = RNN(embed_dim, hidden_size)
+        self.decoder = cell(embed_dim, hidden_size)
+
         # Project decoder hidden state -> vocab logits
         self.out_proj = Dense(vocab_size, hidden_size)
         self.out_softmax = Softmax()
