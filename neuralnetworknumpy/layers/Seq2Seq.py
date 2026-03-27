@@ -3,6 +3,7 @@ from logging import raiseExceptions
 from .Layer import Layer
 from .GRU import GRU
 from .RNN import RNN
+from .LSTM import LSTM
 from .Dense import Dense
 import numpy as np
 from .Embedding import Embedding
@@ -11,6 +12,7 @@ from .Activation import Softmax
 LAYER_REGISTRY = {
         "RNN": RNN,
         "GRU": GRU,
+        "LSTM": LSTM,
     }
 
 class Seq2Seq(Layer):

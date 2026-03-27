@@ -1,15 +1,19 @@
 from .Layer import Layer
 import numpy as np
 
-from .Activation import Sigmoid
+from .Activation import Sigmoid, Tanh, ReLu, Linear
 
+CANDIDATE_ACTIVATION_LAYERS = {
+        "tanh": Tanh,
+        "relu": ReLu,
+        None: Linear,
+    }
 
 class GRU(Layer):
-    def __init__(self, embed_dim, hidden_size, vocab_size=None):
+    def __init__(self, embed_dim, hidden_size, vocab_size=None, candidate_activation="tanh"):
         super().__init__()
         self.hidden_size = hidden_size # H
         self.embed_dim = embed_dim # D
-        self.vocab_size = vocab_size # V — None when used inside Seq2Seq
 
         # Update Gate
         self.W_zx = np.random.randn(embed_dim, hidden_size) * 0.01 # (D, H)
@@ -29,6 +33,11 @@ class GRU(Layer):
         self.W_hh = np.random.randn(hidden_size, hidden_size) * 0.01  # (H, H) # keep small for recurrent
         # Biases for hidden state
         self.b_h = np.zeros((1, hidden_size))
+
+        if candidate_activation not in CANDIDATE_ACTIVATION_LAYERS:
+            raise ValueError(f"Invalid layer_type '{candidate_activation}'. Choose from {list(CANDIDATE_ACTIVATION_LAYERS)}")
+
+        self.candidate_activation = CANDIDATE_ACTIVATION_LAYERS[candidate_activation]()
 
 
         # Adam/momentum moments for input and hidden weights
@@ -73,6 +82,7 @@ class GRU(Layer):
         # Allow passing in an initial hidden state (for decoder)
         h = np.zeros((B, H)) if h_init is None else h_init
 
+
         outputs = []
 
         # Cache for backprop
@@ -81,6 +91,8 @@ class GRU(Layer):
         self.last_z = []
         self.last_r = []
         self.last_h_tilde = []
+
+        self.h_init_cache = np.zeros((B, H)) if h_init is None else h_init.copy()
 
         for t in range(T): # Goes over each token (seq_len)
             # Current token batch and embedding dims
@@ -104,8 +116,9 @@ class GRU(Layer):
             # Candidate hidden - result of activation
             # ---------------
 
-            # h_t' = tanh( W_xh * X_t + W_hh * ( r_t ⊙ h_t-1 ) + b_h )
-            h_tilde  = np.tanh((r_t * h) @ self.W_hh + x_t @ self.W_xh + self.b_h)
+            # h_t' = ϕ( W_xh * X_t + W_hh * ( r_t ⊙ h_t-1 ) + b_h )
+            #h_tilde  = np.tanh((r_t * h) @ self.W_hh + x_t @ self.W_xh + self.b_h)
+            h_tilde = self.candidate_activation.forward((r_t * h) @ self.W_hh + x_t @ self.W_xh + self.b_h)
 
             # ---------------
             # Final hidden state
@@ -113,8 +126,6 @@ class GRU(Layer):
 
             # h_t = ( 1 - z_t ) ⊙ h_t-1 + z_t ⊙ h_t'
             h = (1-z_t) * h + z_t * h_tilde
-
-            self.h_init_cache = np.zeros((B, H)) if h_init is None else h_init.copy()
 
             # Build last h and x for backprop
             self.last_h.append(h)
@@ -178,7 +189,9 @@ class GRU(Layer):
 
             dh_tilde = dh * z_t
 
-            da_t = dh_tilde * ( 1 - h_tilde * h_tilde )
+            # h' Activation backward pass
+            self.candidate_activation.A = h_tilde
+            da_t = self.candidate_activation.backward(dh_tilde)
 
             # Gradients for hidden layer
             # dW_xh = ∑ (X_t * da_t)
@@ -186,7 +199,7 @@ class GRU(Layer):
             # dW_hh = ∑ ((r_t ⊙ h_t-1).T * da_t)
             dW_hh += ( r_t * h_prev ).T @ da_t
             # db_h = ∑ (da_t)
-            db_h += np.sum(da_t, axis=0)
+            db_h += np.sum(da_t, axis=0, keepdims=True)
 
             # Repeated calc
             d_temp = ( da_t @ self.W_hh.T )
@@ -196,7 +209,10 @@ class GRU(Layer):
             # ---------------
 
             dr_t = d_temp * h_prev
-            da_r = dr_t * r_t * ( 1 - r_t )
+
+            # Reset gate Activation backward pass
+            self.r_activation.A = r_t
+            da_r = self.r_activation.backward(dr_t)
 
             # Gradients for reset gate
             # dW_rx = ∑ (X_t * da_r)
@@ -204,14 +220,16 @@ class GRU(Layer):
             # dW_rh = ∑ (h_t-1 * da_r)
             dW_rh += h_prev.T @ da_r
             # db_r = ∑ (da_r)
-            db_r += np.sum(da_r, axis=0)
+            db_r += np.sum(da_r, axis=0, keepdims=True)
 
             # ---------------
             # Update Gate
             # ---------------
 
             dz_t = dh * ( h_tilde - h_prev )
-            da_z = dz_t * z_t * (1 - z_t)
+            # Update gate Activation backward pass
+            self.z_activation.A = z_t
+            da_z = self.z_activation.backward(dz_t)
 
             # Gradients for update gate
             # dW_zx = ∑ (X_t * da_z)
@@ -219,7 +237,7 @@ class GRU(Layer):
             # dW_zh = ∑ (h_t-1 * da_z)
             dW_zh += h_prev.T @ da_z
             # db_z = ∑ (da_z)
-            db_z += np.sum(da_z, axis=0)
+            db_z += np.sum(da_z, axis=0, keepdims=True)
 
             # ---------------
             # Final Gradients
