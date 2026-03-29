@@ -10,7 +10,7 @@ CANDIDATE_ACTIVATION_LAYERS = {
     }
 
 class GRU(Layer):
-    def __init__(self, embed_dim, hidden_size, vocab_size=None, candidate_activation="tanh"):
+    def __init__(self, embed_dim, hidden_size, candidate_activation="tanh"):
         super().__init__()
         self.hidden_size = hidden_size # H
         self.embed_dim = embed_dim # D
@@ -72,7 +72,7 @@ class GRU(Layer):
     # RNN preserves past weights and calcs via the hidden state
     # h_t - current hidden state, is the result of former h_t-1, and current input x_t
     # this way, RNN remembers past inputs - but is suffering from vanishing gradient
-    def forward(self, emb, h_init=None, training=None):
+    def forward(self, emb, h_init=None, c_init=None, training=None):
         B, T, D = emb.shape # (batch_size, seq_len, emb_dim)
         H = self.hidden_size
 
@@ -137,7 +137,9 @@ class GRU(Layer):
             outputs.append(h)
 
         # Built hidden state again (connect all tokens outputs)
-        return np.stack(outputs, axis=1) # (B, T, H)
+        self.h_T = h # Store for seq2seq like models
+        return np.stack(outputs, axis=1)
+        # (B, T, H)
 
 
 

@@ -63,16 +63,34 @@ class Dense(Layer):
           self.W = np.random.randn(self.in_size, self.out_size).astype(np.float32) * 0.01
 
   def forward(self, A_prev, training=None):
+      # Handle both 2D and 3D
       if self.W is None:
-          self.build(A_prev.shape[1])
+          self.build(A_prev.shape[-1])
 
-      self.A_prev = A_prev
+      self.input_shape = A_prev.shape  # store for backward
+
+      # Flatten 3D input - LM
+      if A_prev.ndim == 3:
+          B, T, D = A_prev.shape
+          A_prev_flat = A_prev.reshape(B * T, D)
+      else:
+          A_prev_flat = A_prev
+
+      self.A_prev = A_prev_flat
       self.Z = A_prev @ self.W + self.b
       self.A = self.Z
 
       return self.Z
 
   def backward(self, dA, skip_activation=False):
+      # Handle both 2D and 3D
+      if dA.ndim == 3:
+          B, T, V = dA.shape
+          dA_flat = dA.reshape(B * T, V)
+      else:
+          dA_flat = dA
+
+      dA = dA_flat
 
       # dW_i = dZ_i · A_{i}^T
       # Gradient of the loss w.r.t. weights of layer i
@@ -84,7 +102,14 @@ class Dense(Layer):
 
       # Gradient to pass backward
       # dA_prev_i = W_i · dA_i
-      return dA @ self.W.T
+      dA_prev = dA @ self.W.T
+
+      # Restore 3D shape for recurrent layers upstream
+      if len(self.input_shape) == 3:
+          B, T, D = self.input_shape
+          dA_prev = dA_prev.reshape(B, T, D)  # (B, T, H)
+
+      return dA_prev
 
 
   def update(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):

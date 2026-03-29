@@ -199,13 +199,14 @@ class NeuralNetwork:
             if self.task == "language_model":
                 B, T, V = y_pred.shape
 
-                # Trim y_true to match T in case of mismatch
-                y_true = y_true[:B, :T]  # <-- add this line
+                # Ensure correct shape
+                assert y_true.shape == (B, T), f"y_true shape {y_true.shape} != {(B, T)}"
+                assert np.issubdtype(y_true.dtype, np.integer), "y_true must be integer indices"
                 assert y_true.max() < V, f"Token id {y_true.max()} out of bounds for vocab size {V}"
 
                 # Flatten batch and time
                 y_pred_flat = y_pred.reshape(B * T, V)  # (B*T, V)
-                y_true_flat = y_true.reshape(B * T)  # (B*T,)
+                y_true_flat = y_true.reshape(-1)  # (B*T,)
 
                 # Gradient
                 d = np.zeros_like(y_pred_flat)    # (B*T, V)

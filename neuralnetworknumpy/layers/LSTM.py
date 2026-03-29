@@ -5,32 +5,35 @@ from .Activation import Sigmoid, Tanh, ReLu, Linear
 
 
 class LSTM(Layer):
-    def __init__(self, embed_dim, hidden_size, vocab_size=None):
+    def __init__(self, embed_dim, hidden_size):
         super().__init__()
         self.hidden_size = hidden_size # H
         self.embed_dim = embed_dim # D
 
+        # Scale for wieghts
+        scale = np.sqrt(2.0 / (embed_dim + hidden_size))
+
         # Forget Gate
-        self.W_fx = np.random.randn(embed_dim, hidden_size) * 0.01 # (D, H)
-        self.W_fh = np.random.randn(hidden_size, hidden_size) * 0.01 # (H, H)
+        self.W_fx = np.random.randn(embed_dim, hidden_size) * scale # (D, H)
+        self.W_fh = np.random.randn(hidden_size, hidden_size) * scale # (H, H)
         self.b_f = np.zeros((1, hidden_size)) # (1, H)
         self.f_activation = Sigmoid()
 
         # Input Gate
-        self.W_ix = np.random.randn(embed_dim, hidden_size) * 0.01  # (D, H)
-        self.W_ih = np.random.randn(hidden_size, hidden_size) * 0.01  # (H, H)
+        self.W_ix = np.random.randn(embed_dim, hidden_size) * scale  # (D, H)
+        self.W_ih = np.random.randn(hidden_size, hidden_size) * scale  # (H, H)
         self.b_i = np.zeros((1, hidden_size)) # (1, H)
         self.i_activation = Sigmoid()
 
         # Output Gate
-        self.W_ox = np.random.randn(embed_dim, hidden_size) * 0.01  # (D, H)
-        self.W_oh = np.random.randn(hidden_size, hidden_size) * 0.01  # (H, H)
+        self.W_ox = np.random.randn(embed_dim, hidden_size) * scale  # (D, H)
+        self.W_oh = np.random.randn(hidden_size, hidden_size) * scale  # (H, H)
         self.b_o = np.zeros((1, hidden_size))  # (1, H)
         self.o_activation = Sigmoid()
 
         # C
-        self.W_cx = np.random.randn(embed_dim, hidden_size) * 0.01
-        self.W_ch = np.random.randn(hidden_size, hidden_size) * 0.01
+        self.W_cx = np.random.randn(embed_dim, hidden_size) * scale
+        self.W_ch = np.random.randn(hidden_size, hidden_size) * scale
         self.b_c = np.zeros((1, hidden_size))
         self.c_activation = Tanh()
 
@@ -155,11 +158,13 @@ class LSTM(Layer):
             outputs.append(h)
 
         # Built hidden state again (connect all tokens outputs)
+        self.h_T = h # Store for seq2seq like models
+        self.c_T = c # Store for seq2seq like models
         return np.stack(outputs, axis=1) # (B, T, H)
 
 
 
-    def backward(self, dlogits):
+    def backward(self, dlogits, dc_external=None):
         B, T, _ = dlogits.shape # (batch_size, seq_len, vocab_size OR hidden_size)
         H = self.hidden_size # hidden_state
         D = self.embed_dim # embedding_dims
@@ -186,7 +191,9 @@ class LSTM(Layer):
 
         dh_next = np.zeros((B, H)) # hidden state gradient
 
-        dc_next = np.zeros((B, H)) # hidden state gradient
+        # If an external dc gradient is passed in (from Seq2Seq encoder backward),
+        # seed dc_next with it instead of zeros
+        dc_next = np.zeros((B, H)) if dc_external is None else dc_external[:, -1, :]
 
 
         # Backprop through time
@@ -343,7 +350,7 @@ class LSTM(Layer):
         # Expose gradient w.r.t. the initial hidden state
         # so Seq2Seq can pass it back to the encoder
         self.dh_init = dh_next  # (B, H)  - gradient w.r.t. h_init
-        self.dc_next = dc_next
+        self.dc_init = dc_next
 
         return demb
 

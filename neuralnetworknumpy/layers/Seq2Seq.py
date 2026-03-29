@@ -83,8 +83,9 @@ class Seq2Seq(Layer):
         # Encoder
         # --------------
         enc_emb = self.encoder_embedding.forward(X, training)   # (B, T_in, E)
-        enc_h   = self.encoder.forward(enc_emb)             # (B, T_in, H)
-        h       = enc_h[:, -1, :]                            # (B, H) - context vector
+        enc_h = self.encoder.forward(enc_emb)             # (B, T_in, H)
+        h = self.encoder.h_T
+        c = self.encoder.c_T
 
         # Storage for backward pass
         self.enc_emb = enc_emb
@@ -102,7 +103,7 @@ class Seq2Seq(Layer):
         # teacher forcing - feed real next token
         if teacher_forcing and y is not None:
             # Shift right: prepend start token, drop last token
-            start = np.full((B, 1), 0, dtype=np.int32)  # (B, 1)
+            start = np.full((B, 1), 1, dtype=np.int32)  # (B, 1)
             dec_input_ids = np.concatenate([start, y[:, :-1]], axis=1)  # (B, T_out)
         else:
             dec_input_ids = np.zeros((B, T_out), dtype=np.int32)
@@ -111,7 +112,7 @@ class Seq2Seq(Layer):
         dec_emb = self.decoder_embedding.forward(dec_input_ids, training)  # (B, T_out, E)
 
         # Run decoder RNN on full sequence
-        dec_h = self.decoder.forward(dec_emb, h_init=h)  # (B, T_out, H)
+        dec_h = self.decoder.forward(dec_emb, h_init=h, c_init=c)  # (B, T_out, H)
 
         # Project all timesteps at once
         # Flatten dec_h for Dense layer
@@ -151,7 +152,12 @@ class Seq2Seq(Layer):
         # Encoder backward
         dh_enc = np.zeros((B, self.enc_emb.shape[1], self.hidden_size)) # (B, T_in, H)
         dh_enc[:, -1, :] = self.decoder.dh_init  # grad from decoder init
-        denc_emb = self.encoder.backward(dh_enc)
+
+        # Also pass dc back - create a matching c gradient buffer
+        dc_enc = np.zeros_like(dh_enc)
+        dc_enc[:, -1, :] = self.decoder.dc_init
+
+        denc_emb = self.encoder.backward(dh_enc, dc_enc)
         self.encoder_embedding.backward(denc_emb)
 
 
