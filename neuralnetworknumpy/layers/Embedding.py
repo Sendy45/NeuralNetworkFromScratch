@@ -1,5 +1,5 @@
 from .Layer import Layer
-import numpy as np
+from neuralnetworknumpy.backend import np
 
 class Embedding(Layer):
     def __init__(self, vocab_size, embed_dim):

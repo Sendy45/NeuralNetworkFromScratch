@@ -1,4 +1,4 @@
-import numpy as np
+from neuralnetworknumpy.backend import np
 
 class History:
   def __init__(self):

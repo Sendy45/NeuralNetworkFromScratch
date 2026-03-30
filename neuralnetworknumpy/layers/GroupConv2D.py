@@ -1,5 +1,5 @@
 from .Conv2D import Conv2D
-import numpy as np
+from neuralnetworknumpy.backend import np
 
 class GroupConv2D(Conv2D):
     """

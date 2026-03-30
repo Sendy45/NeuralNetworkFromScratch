@@ -1,5 +1,5 @@
 from .Layer import Layer
-import numpy as np
+from neuralnetworknumpy.backend import np
 
 from .Activation import Sigmoid, Tanh, ReLu, Linear
 

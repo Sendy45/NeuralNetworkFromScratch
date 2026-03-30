@@ -1,5 +1,3 @@
-from logging import raiseExceptions
-
 from .Layer import Layer
 from .GRU import GRU
 from .RNN import RNN

@@ -1,5 +1,5 @@
 from .Layer import Layer
-import numpy as np
+from neuralnetworknumpy.backend import np
 
 class RNN(Layer):
     def __init__(self, embed_dim, hidden_size):

@@ -1,5 +1,5 @@
 from .Layer import Layer
-import numpy as np
+from neuralnetworknumpy.backend import np
 
 class GlobalAveragePooling2D(Layer):
     """
