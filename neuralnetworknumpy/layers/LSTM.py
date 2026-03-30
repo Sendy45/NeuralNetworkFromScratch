@@ -9,7 +9,7 @@ class LSTM(Layer):
         self.hidden_size = hidden_size # H
         self.embed_dim = embed_dim # D
 
-        # Scale for wieghts
+        # Scale for weights
         scale = np.sqrt(2.0 / (embed_dim + hidden_size))
 
         # Forget Gate

@@ -57,7 +57,7 @@ class PositionEmbedding(Layer):
 
         return dX
 
-    def date(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
+    def update(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
 
         if optimizer == "adamW":
             dP = self.dP  # pure gradient
