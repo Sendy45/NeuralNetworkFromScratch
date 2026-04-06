@@ -31,3 +31,13 @@ class DepthwiseSeparableConv2D(Layer):
     def update(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
         self.depthwise.update(lambda_, lr, beta1, beta2, _eps, optimizer, t)
         self.pointwise.update(lambda_, lr, beta1, beta2, _eps, optimizer, t)
+
+    def get_params(self):
+        return self.depthwise.get_params() + self.pointwise.get_params()
+
+    def describe(self):
+        return f"DepthwiseSepConv2D dw={self.depthwise.get_params()} pw={self.pointwise.get_params()}"
+
+    def _cache_attrs(self): return ["A_prev"]
+
+    def _child_attrs(self): return ["depthwise", "pointwise"]

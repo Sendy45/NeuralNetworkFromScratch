@@ -39,3 +39,5 @@ class GlobalAveragePooling2D(Layer):
 
     def update(self, *args, **kwargs):
         pass
+
+    def _cache_attrs(self): return ["A_prev", "A", "Z"]

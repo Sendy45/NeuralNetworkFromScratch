@@ -73,3 +73,13 @@ class TransformerBlock(Layer):
         self.norm1.update(lambda_, lr, beta1, beta2, _eps, optimizer, t)
         self.norm2.update(lambda_, lr, beta1, beta2, _eps, optimizer, t)
 
+    def get_params(self):
+        return sum(sub.get_params() for sub in [
+            self.attn, self.ffn, self.norm1, self.norm2
+        ])
+
+    def describe(self): return f"TransformerBlock d_model={self.model_dim} heads={self.n_heads} ffn={self.ffn_dim}"
+
+    def _cache_attrs(self): return ["residual1", "residual2"]
+
+    def _child_attrs(self): return ["attn", "ffn", "norm1", "norm2"]

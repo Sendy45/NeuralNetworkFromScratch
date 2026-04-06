@@ -17,6 +17,7 @@ class Activation(Layer):
   def update(self, *args, **kwargs):
     pass  # no parameters to update
 
+  def _cache_attrs(self): return ["A"]
 
 class ReLu(Activation):
   """

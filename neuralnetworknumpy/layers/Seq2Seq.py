@@ -163,3 +163,20 @@ class Seq2Seq(Layer):
         self.encoder.update(*args, **kwargs)
         self.decoder.update(*args, **kwargs)
         self.out_proj.update(*args, **kwargs)
+
+    def get_params(self):
+        return sum(sub.get_params() for sub in self.children())
+
+    def describe(self):
+        return f"Seq2Seq          hidden={self.hidden_size}"
+
+    def _cache_attrs(self):
+        return ["enc_emb", "A", "probs_flat"]
+
+    def _child_attrs(self):
+        return ["encoder_embedding", "encoder",
+                "decoder_embedding", "decoder", "out_proj"]
+
+    def children(self):
+        return [self.encoder_embedding, self.encoder,
+                self.decoder_embedding, self.decoder, self.out_proj]

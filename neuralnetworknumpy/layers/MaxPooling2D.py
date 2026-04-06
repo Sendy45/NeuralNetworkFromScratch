@@ -171,3 +171,11 @@ class MaxPooling2D(Layer):
 
     def update(self, *args, **kwargs):
         pass
+
+    def describe(self):
+        p_h, p_w = self.pool_size
+        s_h, s_w = self.strides
+        return f"MaxPooling2D     pool=({p_h},{p_w}) stride=({s_h},{s_w})"
+
+    def _cache_attrs(self):
+        return ["A_pad", "A_prev", "A", "Z", "max_index", "m", "_non_overlapping"]

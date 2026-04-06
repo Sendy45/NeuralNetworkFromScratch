@@ -57,3 +57,21 @@ class ResidualBlock(Layer):
         if self.projection is not None:
             self.projection.update(*args)
 
+
+    def get_params(self):
+        total = sum(l.get_params() for l in self.layers)
+        if self.projection is not None:
+            total += self.projection.get_params()
+        return total
+
+    def _cache_attrs(self):
+        return ["A_prev", "Z", "A"]
+
+    def _child_attrs(self):
+        return ["layers", "projection"]
+
+    def children(self):
+        kids = list(self.layers)
+        if self.projection is not None:
+            kids.append(self.projection)
+        return kids

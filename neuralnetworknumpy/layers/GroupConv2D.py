@@ -217,3 +217,14 @@ class GroupConv2D(Conv2D):
         self.dW = dW
         self.db = db
         return dA_pad[:, h_sl, w_sl, :]
+
+    def get_params(self):
+        return self.W.size + self.b.size if self.W is not None else 0
+
+    def describe(self):
+        k_h, k_w = self.kernel_size
+        s_h, s_w = self.strides
+        return f"GroupConv2D      filters={self.filters} kernel={k_h}x{k_w} groups={self.groups} stride=({s_h},{s_w})"
+
+    def _cache_attrs(self):
+        return ["A_pad", "patches", "Z", "A_prev", "A", "dW", "db", "m", "_N"]

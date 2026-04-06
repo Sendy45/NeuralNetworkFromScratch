@@ -25,3 +25,5 @@ class Flatten(Layer):
 
     def update(self, *args, **kwargs):
         pass
+
+    def _cache_attrs(self): return ["input_shape", "A_prev"]

@@ -81,3 +81,12 @@ class Embedding(Layer):
         if optimizer == "adamW":
             self.W *= (1 - lr * lambda_)  # Decoupled weight decay
 
+
+    def get_params(self):
+        return self.W.size if self.W is not None else 0
+
+    def describe(self):
+        return f"Embedding        vocab={self.vocab_size} dim={self.embed_dim}"
+
+    def _cache_attrs(self):
+        return ["input_ids", "A", "dW"]

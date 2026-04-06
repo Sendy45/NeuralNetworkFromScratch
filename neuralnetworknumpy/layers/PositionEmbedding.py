@@ -110,3 +110,11 @@ class PositionEmbedding(Layer):
             self.P *= (1 - lr * lambda_)  # Decoupled weight decay
 
 
+    def get_params(self):
+        return self.P.size if self.P is not None else 0
+
+    def describe(self):
+        return f"PositionEmbedding seq={self.seq_len} dim={self.embed_dim}"
+
+    def _cache_attrs(self):
+        return ["X", "A", "dP", "T"]

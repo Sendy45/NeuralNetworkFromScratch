@@ -58,7 +58,6 @@ class LSTM(Layer):
         self.c_activation = Tanh()
 
 
-
         # Adam/momentum moments for input and hidden weights
         self.mW_fx = np.zeros((embed_dim, hidden_size))
         self.vW_fx = np.zeros((embed_dim, hidden_size))
@@ -462,3 +461,21 @@ class LSTM(Layer):
             # ---- AdamW decoupled weight decay ----
             if optimizer == "adamW":
                 W *= (1 - lr * lambda_)
+
+    def get_params(self):
+        return (self.W_fx.size + self.W_fh.size + self.b_f.size +
+                self.W_ix.size + self.W_ih.size + self.b_i.size +
+                self.W_ox.size + self.W_oh.size + self.b_o.size +
+                self.W_cx.size + self.W_ch.size + self.b_c.size)
+
+    def describe(self):
+        return f"LSTM             hidden={self.hidden_size}"
+
+    def _cache_attrs(self):
+        return ["last_h", "last_x", "last_f", "last_i", "last_o",
+                "last_c", "last_c_tilde",
+                "h_init_cache", "c_init_cache", "h_T", "c_T",
+                "dW_fx", "dW_fh", "dW_ix", "dW_ih",
+                "dW_ox", "dW_oh", "dW_cx", "dW_ch",
+                "db_f", "db_i", "db_o", "db_c",
+                "dh_init", "dc_init"]

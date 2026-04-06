@@ -26,4 +26,7 @@ class DepthwiseConv2D(GroupConv2D):
         self.groups = input_size
         super().build(input_size)
 
+    def describe(self):
+        k_h, k_w = self.kernel_size
+        return f"DepthwiseConv2D  kernel={k_h}x{k_w}"
 

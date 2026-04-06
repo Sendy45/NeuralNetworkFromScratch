@@ -116,3 +116,12 @@ class LayerNorm(Layer):
             # SGD fallback — same as your BatchNorm
             self.gamma -= lr * self.dgamma
             self.beta -= lr * self.dbeta
+
+    def get_params(self):
+        return self.gamma.size + self.beta.size if self.gamma is not None else 0
+
+    def describe(self):
+        return f"LayerNorm        dim={self.embed_dim}"
+
+    def _cache_attrs(self):
+        return ["X", "mean", "var", "X_hat", "dgamma", "dbeta"]

@@ -204,3 +204,15 @@ class SingleHeadAttention(Layer):
             # ---- AdamW decoupled weight decay ----
             if optimizer == "adamW":
                 W *= (1 - lr * lambda_)
+
+    def get_params(self):
+        total = self.W_q.size + self.W_k.size + self.W_v.size
+        if self.output_projection:
+            total += self.W_o.size
+        return total
+
+    def describe(self):
+        return f"SingleHeadAttn   key_dim={self.key_dim}"
+
+    def _cache_attrs(self):
+        return ["scores", "emb", "Q", "K", "V", "pre_proj", "dW_q", "dW_k", "dW_v", "dW_o"]

@@ -44,3 +44,7 @@ class FeedForwardNetwork(Layer):
 
         self.dense1.update(lambda_, lr, beta1, beta2, _eps, optimizer, t)
         self.dense2.update(lambda_, lr, beta1, beta2, _eps, optimizer, t)
+
+    def describe(self): return f"FFN              {self.model_dim} → {self.ffn_dim} → {self.model_dim}"
+
+    def _child_attrs(self): return ["dense1", "relu", "dense2"]

@@ -252,3 +252,14 @@ class Conv2D(Layer):
 
         if optimizer == "adamW":
             self.W *= (1 - lr * lambda_)
+
+    def get_params(self):
+        return self.W.size + self.b.size if self.W is not None else 0
+
+    def describe(self):
+        k_h, k_w = self.kernel_size
+        s_h, s_w = self.strides
+        return f"Conv2D           filters={self.filters} kernel={k_h}x{k_w} stride=({s_h},{s_w})"
+
+    def _cache_attrs(self):
+        return ["A_pad", "cols", "W_col", "Z", "A_prev", "A", "dW", "db", "m"]

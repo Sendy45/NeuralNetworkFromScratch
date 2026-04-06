@@ -36,3 +36,9 @@ class SpatiallySeparableConv2D(Layer):
     def update(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
         self.filter1.update(lambda_, lr, beta1, beta2, _eps, optimizer, t)
         self.filter2.update(lambda_, lr, beta1, beta2, _eps, optimizer, t)
+
+    def get_params(self):
+        return self.filter1.get_params() + self.filter2.get_params()
+
+    def _child_attrs(self):
+        return ["filter1", "filter2"]

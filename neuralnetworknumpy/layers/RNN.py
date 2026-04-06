@@ -210,3 +210,13 @@ class RNN(Layer):
         if optimizer == "adamW":
             self.W_xh *= (1 - lr * lambda_)
             self.W_hh *= (1 - lr * lambda_)
+
+    def get_params(self):
+        return self.W_xh.size + self.W_hh.size + self.b_h.size
+
+    def describe(self):
+        return f"RNN              hidden={self.hidden_size}"
+
+    def _cache_attrs(self):
+        return ["last_h", "last_x", "last_h_prev", "h_init",
+                "dW_xh", "dW_hh", "db_h", "dh_init"]

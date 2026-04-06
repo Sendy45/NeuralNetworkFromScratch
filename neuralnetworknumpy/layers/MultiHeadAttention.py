@@ -51,3 +51,10 @@ class MultiHeadAttention(Layer):
 
         for h in self.heads:
             h.update(lambda_, lr, beta1, beta2, _eps, optimizer, t)
+
+    def get_params(self):
+        return self.output_projection.get_params() + sum(head.get_params() for head in self.heads)
+
+    def describe(self): return f"MultiHeadAttn    heads={len(self.heads)} key_dim={self.key_dim}"
+
+    def _child_attrs(self): return ["heads", "output_projection"]

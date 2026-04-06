@@ -37,3 +37,7 @@ class Dropout(Layer):
   def update(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
     # Dropout layer has no trainable parameters
     pass
+
+  def describe(self): return f"Dropout          rate={self.rate}"
+
+  def _cache_attrs(self): return ["mask", "A"]

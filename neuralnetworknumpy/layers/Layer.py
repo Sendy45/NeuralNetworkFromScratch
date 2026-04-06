@@ -44,4 +44,31 @@ class Layer:
   def update(self, lambda_, lr, beta1, beta2, _eps, optimizer, t):
     raise NotImplementedError
 
+  # Return total number of trainable parameters
+  def get_params(self) -> int:
+      return 0  # default: no params (activations, pooling, etc.)
+
+  # Return a short human-readable description of this layer
+  def describe(self) -> str:
+      return type(self).__name__
+
+  # Remove forward-pass cache to save memory before serialisation
+  def strip_cache(self):
+      for attr in self._cache_attrs():
+          self.__dict__.pop(attr, None)
+      for child in (getattr(self, c, None) for c in self._child_attrs()):
+          if child is not None:
+              if isinstance(child, (list, tuple)):
+                  for c in child:
+                      c.strip_cache()
+              else:
+                  child.strip_cache()
+
+  # Override to list forward-pass cache attribute names
+  def _cache_attrs(self):
+      return []
+
+  # Override to list attribute names that hold sub-layers
+  def _child_attrs(self):
+      return []
 

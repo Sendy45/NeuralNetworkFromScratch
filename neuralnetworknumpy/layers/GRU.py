@@ -395,3 +395,17 @@ class GRU(Layer):
             # ---- AdamW decoupled weight decay ----
             if optimizer == "adamW":
                 W *= (1 - lr * lambda_)
+
+    def get_params(self):
+        return (self.W_hh.size + self.W_xh.size + self.b_h.size +
+                self.W_rh.size + self.W_rx.size + self.b_r.size +
+                self.W_zh.size + self.W_zx.size + self.b_z.size)
+
+    def describe(self):
+        return f"GRU              hidden={self.hidden_size}"
+
+    def _cache_attrs(self):
+        return ["last_h", "last_x", "last_z", "last_r", "last_h_tilde",
+                "h_init_cache", "h_T",
+                "dW_xh", "dW_hh", "dW_rx", "dW_rh", "dW_zx", "dW_zh",
+                "db_h", "db_r", "db_z", "dh_init"]

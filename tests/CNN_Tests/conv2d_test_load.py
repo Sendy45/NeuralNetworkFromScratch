@@ -14,7 +14,7 @@ test_X  = test_X.astype(np.float32)  / 255.0
 train_X = train_X[..., np.newaxis]
 test_X  = test_X[..., np.newaxis]
 
-model = NeuralNetwork.load("conv2d_model.h5.npz")
+model = NeuralNetwork.load("conv2d_model.h5")
 
 # Assume X_test[0:1] is a single image
 feature_maps = model.visualize_feature_maps(test_X[0:1], layer_index=0)  # first conv layer

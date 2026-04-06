@@ -158,3 +158,12 @@ class BatchNorm2D(Layer):
         self.gamma -= lr * self.dgamma
         self.beta -= lr * self.dbeta
 
+    def get_params(self):
+        return self.gamma.size + self.beta.size if self.gamma is not None else 0
+
+    def describe(self):
+        return f"BatchNorm2D      momentum={self.momentum}"
+
+    def _cache_attrs(self):
+        return ["A_prev", "mean", "x_mu", "var", "std_inv", "X_hat", "A", "dgamma", "dbeta"]
+

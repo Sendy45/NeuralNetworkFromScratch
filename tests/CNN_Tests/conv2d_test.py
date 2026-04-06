@@ -58,4 +58,7 @@ history = model.fit(
     batch_size=64
 )
 
+model.summary()
+
+
 model.save("conv2d_model.h5")

@@ -167,4 +167,11 @@ class Dense(Layer):
       if optimizer == "adamW":
         self.W *= (1 - lr * lambda_)  # Decoupled weight decay
 
+  def get_params(self):
+      return self.W.size + self.b.size if self.W is not None else 0
 
+  def describe(self):
+      return f"Dense            {self.in_size} → {self.out_size}"
+
+  def _cache_attrs(self):
+      return ["Z", "A", "A_prev", "dW", "db"]
