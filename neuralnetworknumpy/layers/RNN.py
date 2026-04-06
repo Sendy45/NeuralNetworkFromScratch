@@ -2,6 +2,18 @@ from .Layer import Layer
 from neuralnetworknumpy.backend import np
 
 class RNN(Layer):
+    """
+        RNN layer.
+
+        Processes sequences by updating a hidden state at each time step
+        based on the current input and previous hidden state.
+
+        Uses a simple tanh activation, which may suffer from vanishing gradients.
+
+        Input shape: (B, T, D)
+
+        Output shape: (B, T, H)
+    """
     def __init__(self, embed_dim, hidden_size):
         super().__init__()
         self.hidden_size = hidden_size # H

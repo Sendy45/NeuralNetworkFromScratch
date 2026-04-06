@@ -3,6 +3,16 @@ from .Layer import Layer
 from .Activation import Softmax
 
 class SingleHeadAttention(Layer):
+    """
+        Single-head attention layer.
+
+        Input: (B, T, D)  - embeddings
+        Output: (B, T, D) - attended embeddings
+
+        Computes Q, K, V projections and attention scores:
+            Attention = softmax(Q K^T / √Dk) V
+        Optionally applies output projection to match embedding dimension.
+    """
     def __init__(self, embed_dim, key_dim, output_projection=True):
         super().__init__()
 
@@ -34,12 +44,15 @@ class SingleHeadAttention(Layer):
         self.vW_v = np.zeros_like(self.W_v)
 
 
-    def forward(self, emb, mask=None,training=None):
+    def forward(self, emb, context=None, mask=None,training=None):
         B, T, D = emb.shape # (Batch_size, Seq_len, Embedding_dims)
 
         Q = emb @ self.W_q # (B, T, Dk)
-        K = emb @ self.W_k # (B, T, Dk)
-        V = emb @ self.W_v # (B, T, Dk)
+
+        # Allow context from encoder block
+        src = context if context is not None else emb
+        K = src @ self.W_k # (B, T, Dk)
+        V = src @ self.W_v # (B, T, Dk)
 
         # Attention = softmax( (K.T @ Q) / √dk ) @ V
 
@@ -49,10 +62,9 @@ class SingleHeadAttention(Layer):
         # / √dk
         scores /= np.sqrt(self.key_dim) # Keep numerical stability
 
-        # Change later to optional
-        # Masking - prevent future tokens from affecting past ones
-        mask = np.triu(np.full((T, T), -np.inf), k=1)
-        scores += mask
+        # Apply precomputed mask - True = block this position
+        if mask is not None:
+            scores = np.where(mask, -np.inf, scores)
 
         # Softmax pass
         scores = self.softmax.forward(scores)

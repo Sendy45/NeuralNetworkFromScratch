@@ -4,6 +4,27 @@ from .Activation import Sigmoid, Tanh, ReLu, Linear
 
 
 class LSTM(Layer):
+    """
+        LSTM recurrent layer.
+
+        Uses gated mechanisms to control information flow:
+
+        - Forget gate (f):
+            Decides what information from the previous cell state to discard.
+
+        - Input gate (i):
+            Controls how much new information is written to the cell state.
+
+        - Candidate (c'):
+            New information that could be added to the cell state.
+
+        - Output gate (o):
+            Determines what part of the cell state is exposed as the hidden state.
+
+        Input shape: (B, T, D)
+
+        Output shape: (B, T, H)
+    """
     def __init__(self, embed_dim, hidden_size):
         super().__init__()
         self.hidden_size = hidden_size # H

@@ -3,6 +3,18 @@ from .Dense import Dense
 from .Activation import ReLu
 
 class FeedForwardNetwork(Layer):
+    """
+        Position-wise Feed-Forward Network (FFN) for transformers.
+
+        Input: (B, T, D) - sequence embeddings
+        Output: (B, T, D) - transformed embeddings
+
+        Computation:
+            FFN(x) = Dense2(ReLu(Dense1(x)))
+            - Dense1: projects D -> ffn_dim
+            - ReLu: elementwise activation
+            - Dense2: projects ffn_dim -> D
+    """
     def __init__(self, model_dim, ffn_dim):
         super().__init__()
         self.model_dim = model_dim

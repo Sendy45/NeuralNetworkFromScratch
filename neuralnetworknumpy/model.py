@@ -2,7 +2,7 @@ import numpy as np
 from tqdm.auto import tqdm
 import pickle, os
 
-from .layers import Dropout, BatchNorm, Dense, Conv2D, MaxPooling2D, AveragePooling2D
+from .layers import *
 from .utils import History
 
 class NeuralNetwork:
@@ -90,66 +90,147 @@ class NeuralNetwork:
         model.num_classes = data["num_classes"]
         return model
 
-
     def summary(self):
-        ll = 60 # Line Length
+        ll = 70
         print("=" * ll)
         print("Model Summary")
         print("=" * ll)
 
         total_params = 0
 
-        for i, layer in enumerate(self.layers):
+        def count_layer(i, layer, indent=0):
+            nonlocal total_params
             layer_type = type(layer).__name__
+            prefix = "  " * indent
+            idx = f"[{i + 1}]" if indent == 0 else "   "
 
             if isinstance(layer, Dense):
                 params = layer.W.size + layer.b.size if layer.W is not None else 0
                 total_params += params
-                built = f"{layer.in_size} → {layer.out_size}"
-                print(f"[{i+1}] Dense          {built:<20} params: {params}")
+                print(f"{idx} {prefix}Dense            {layer.in_size} → {layer.out_size:<20} params: {params}")
 
-            elif isinstance(layer, BatchNorm):
+            elif isinstance(layer, (BatchNorm, BatchNorm2D)):
                 params = layer.gamma.size + layer.beta.size if layer.gamma is not None else 0
                 total_params += params
-                print(f"[{i+1}] BatchNorm      momentum={layer.momentum:<13} params: {params}")
+                print(f"{idx} {prefix}{layer_type:<20} momentum={layer.momentum:<10} params: {params}")
 
             elif isinstance(layer, Dropout):
-                print(f"[{i+1}] Dropout        rate={layer.rate}")
-
+                print(f"{idx} {prefix}Dropout          rate={layer.rate}")
 
             elif isinstance(layer, Conv2D):
-
                 params = layer.W.size + layer.b.size if layer.W is not None else 0
                 total_params += params
-
                 k_h, k_w = layer.kernel_size
                 s_h, s_w = layer.strides
+                print(
+                    f"{idx} {prefix}Conv2D           {layer.filters} filters {k_h}x{k_w} stride=({s_h},{s_w})   params: {params}")
 
-                built = f"{layer.filters} filters {k_h}x{k_w}"
+            elif isinstance(layer, GroupConv2D):
+                params = layer.W.size + layer.b.size if layer.W is not None else 0
+                total_params += params
+                k_h, k_w = layer.kernel_size
+                print(
+                    f"{idx} {prefix}GroupConv2D      {layer.filters} filters {k_h}x{k_w} groups={layer.groups}   params: {params}")
 
-                print(f"[{i + 1}] Conv2D         {built} stride=({s_h},{s_w}) params: {params}")
+            elif isinstance(layer, DepthwiseSeparableConv2D):
+                dw_params = layer.depthwise.W.size + layer.depthwise.b.size if layer.depthwise.W is not None else 0
+                pw_params = layer.pointwise.W.size + layer.pointwise.b.size if layer.pointwise.W is not None else 0
+                params = dw_params + pw_params
+                total_params += params
+                print(f"{idx} {prefix}DepthwiseSepConv2D                              params: {params}")
+                print(f"     {prefix}  depthwise: {dw_params}  pointwise: {pw_params}")
 
+            elif isinstance(layer, SpatiallySeparableConv2D):
+                params = layer.W.size + layer.b.size if layer.W is not None else 0
+                total_params += params
+                print(f"{idx} {prefix}SpatiallySepConv2D                              params: {params}")
+
+            elif isinstance(layer, DepthwiseConv2D):
+                params = layer.W.size + layer.b.size if layer.W is not None else 0
+                total_params += params
+                k_h, k_w = layer.kernel_size
+                print(
+                    f"{idx} {prefix}DepthwiseConv2D  {k_h}x{k_w} multiplier={layer.depth_multiplier}   params: {params}")
+
+            elif isinstance(layer, ResidualBlock):
+                print(f"{idx} {prefix}ResidualBlock")
+                for j, sub in enumerate(layer.layers):
+                    count_layer(j, sub, indent=indent + 1)
+                if layer.projection is not None:
+                    print(f"     {prefix}  projection:")
+                    count_layer(0, layer.projection, indent=indent + 2)
 
             elif isinstance(layer, MaxPooling2D):
-
                 p_h, p_w = layer.pool_size
                 s_h, s_w = layer.strides
-
-                print(f"[{i + 1}] MaxPooling2D   pool=({p_h},{p_w}) stride=({s_h},{s_w})")
+                print(f"{idx} {prefix}MaxPooling2D     pool=({p_h},{p_w}) stride=({s_h},{s_w})")
 
             elif isinstance(layer, AveragePooling2D):
-
                 p_h, p_w = layer.pool_size
                 s_h, s_w = layer.strides
+                print(f"{idx} {prefix}AveragePooling2D pool=({p_h},{p_w}) stride=({s_h},{s_w})")
 
-                print(f"[{i + 1}] AveragePooling2D   pool=({p_h},{p_w}) stride=({s_h},{s_w})")
+            elif isinstance(layer, GlobalAveragePooling2D):
+                print(f"{idx} {prefix}GlobalAvgPool2D")
+
+            elif isinstance(layer, Flatten):
+                print(f"{idx} {prefix}Flatten")
+
+            elif isinstance(layer, Embedding):
+                params = layer.W.size
+                total_params += params
+                print(
+                    f"{idx} {prefix}Embedding        vocab={layer.vocab_size} dim={layer.embed_dim:<15} params: {params}")
+
+            elif isinstance(layer, PositionEmbedding):
+                params = layer.W.size
+                total_params += params
+                print(f"{idx} {prefix}PositionEmbedding seq={layer.seq_len} dim={layer.embed_dim:<14} params: {params}")
+
+            elif isinstance(layer, TransformerBlock):
+                # Count params inside without printing sub-layers
+                attn_params = sum(w.size for w in [
+                    layer.attn.W_q, layer.attn.W_k, layer.attn.W_v
+                ])
+                if layer.attn.W_o is not None:
+                    attn_params += layer.attn.W_o.size
+                ffn_params = sum(
+                    w.size for w in [layer.ffn.W1, layer.ffn.b1, layer.ffn.W2, layer.ffn.b2]
+                )
+                norm_params = sum(
+                    w.size for w in [layer.norm1.gamma, layer.norm1.beta,
+                                     layer.norm2.gamma, layer.norm2.beta]
+                )
+                params = attn_params + ffn_params + norm_params
+                total_params += params
+                print(
+                    f"{idx} {prefix}TransformerBlock d_model={layer.d_model} heads={layer.n_heads} ffn={layer.ffn_dim:<8} params: {params}")
+
+            elif isinstance(layer, (RNN, GRU, LSTM)):
+                params = sum(w.size for w in layer.weights())  # assumes a weights() method
+                total_params += params
+                print(f"{idx} {prefix}{layer_type:<20} hidden={layer.hidden_size:<15} params: {params}")
+
+            elif isinstance(layer, Seq2Seq):
+                print(f"{idx} {prefix}Seq2Seq")
+                print(f"     {prefix}  encoder:")
+                count_layer(0, layer.encoder, indent=indent + 2)
+                print(f"     {prefix}  decoder:")
+                count_layer(0, layer.decoder, indent=indent + 2)
+
+            elif isinstance(layer, (Softmax, ReLu, Sigmoid, Tanh, Linear)):
+                print(f"{idx} {prefix}{layer_type}")
 
             else:
-                print(f"[{i+1}] {layer_type:<15}")
+                print(f"{idx} {prefix}{layer_type}")
 
-            print("-" * ll)
+            if indent == 0:
+                print("-" * ll)
 
-        print(f"Total trainable parameters: {total_params}")
+        for i, layer in enumerate(self.layers):
+            count_layer(i, layer)
+
+        print(f"Total trainable parameters: {total_params:,}")
         print("=" * ll)
 
 

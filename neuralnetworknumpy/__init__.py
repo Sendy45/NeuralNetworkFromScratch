@@ -36,6 +36,8 @@ from .layers import (
     GRU,
     LSTM,
     Seq2Seq,
+    TransformerBlock,
+    TransformerBlock,
 )
 
 # tokenizer
@@ -51,6 +53,12 @@ from .utils import (
     Scaler,
     split_train_test,
     split_train_validation,
+)
+
+from .masks import (
+    causal_mask,
+    padding_mask,
+    combined_mask,
 )
 
 __all__ = [
@@ -91,10 +99,16 @@ __all__ = [
     "GRU",
     "LSTM",
     "Seq2Seq",
+    "TransformerBlock",
 
     # Utilities
     "History",
     "Scaler",
     "split_train_test",
     "split_train_validation",
+
+    # Masks
+    "causal_mask",
+    "padding_mask",
+    "combined_mask",
 ]

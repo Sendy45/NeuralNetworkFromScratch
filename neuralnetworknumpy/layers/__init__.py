@@ -22,6 +22,7 @@ from .RNN import RNN
 from .GRU import GRU
 from .LSTM import LSTM
 from .Seq2Seq import Seq2Seq
+from .TransformerBlock import TransformerBlock
 
 
 
@@ -55,4 +56,5 @@ __ALL__ = [
     GRU,
     LSTM,
     Seq2Seq,
+    TransformerBlock,
 ]

@@ -15,25 +15,19 @@ LAYER_REGISTRY = {
 
 class Seq2Seq(Layer):
     """
-    Encoder-Decoder sequence to sequence block.
+        Seq2Seq layer with optional RNN, GRU, or LSTM cell.
 
-    Forward pass (training, teacher_forcing=True):
-        1. Encoder RNN reads X:        (B, T_in, E)  -> hidden states, takes final h
-        2. Decoder RNN steps T_out times, starting from encoder's final h
-           - at each step fed the REAL previous token (teacher forcing)
-        3. Output Dense projects each decoder hidden state to vocab logits
+        Encoder reads source token sequence and produces hidden states.
+        Decoder generates target sequence, optionally using teacher forcing.
+        Final decoder hidden states are projected to vocab logits.
 
-    Forward pass (inference, teacher_forcing=False):
-        - Decoder feeds its own previous prediction back in at each step
+        Input shapes:
+            X (source ids): (B, T_in)
+            y (target ids, optional): (B, T_out)
 
-    Shapes:
-        X        : (B, T_in)           integer token ids  (embedding done inside)
-        y        : (B, T_out)          integer token ids  (embedding done inside, for teacher forcing)
-        output   : (B, T_out, V)       logits
+        Output shape:
+            (B, T_out, V)
     """
-
-
-
     def __init__(self, vocab_size, embed_dim, hidden_size, layer_type="RNN"):
         super().__init__()
         self.vocab_size = vocab_size

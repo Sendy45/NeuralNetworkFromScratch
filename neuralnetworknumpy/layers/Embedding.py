@@ -2,6 +2,15 @@ from .Layer import Layer
 from neuralnetworknumpy.backend import np
 
 class Embedding(Layer):
+    """
+        Token Embedding Layer.
+
+        Maps input token IDs (B, T) to embeddings (B, T, D)
+        using a trainable weight matrix of shape (vocab_size, embed_dim).
+
+        Input: (B, T) - integer token IDs
+        Output: (B, T, D) - corresponding embeddings
+    """
     def __init__(self, vocab_size, embed_dim):
         super().__init__()
         self.vocab_size = vocab_size

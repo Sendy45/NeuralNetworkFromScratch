@@ -2,6 +2,16 @@ from .Layer import Layer
 from neuralnetworknumpy.backend import np
 
 class PositionEmbedding(Layer):
+    """
+        Learnable positional embedding layer.
+
+        Adds a trainable position-dependent vector to each token embedding,
+        allowing the model to incorporate sequence order information.
+
+        Input shape: (B, T, D)
+
+        Output shape: (B, T, D)
+    """
     def __init__(self, seq_len):
         super().__init__()
         self.seq_len = seq_len

@@ -10,6 +10,28 @@ CANDIDATE_ACTIVATION_LAYERS = {
     }
 
 class GRU(Layer):
+    """
+        GRU (Gated Recurrent Unit) layer.
+
+        Processes sequences using gated hidden state updates.
+
+        Gates:
+        - Update gate (z):
+            Controls how much of the previous hidden state is kept vs replaced.
+
+        - Reset gate (r):
+            Controls how much past information is used when computing new content.
+
+        - Candidate (h'):
+            New hidden content computed from current input and gated past state.
+
+        Final hidden state:
+            Interpolates between old state and new candidate using z.
+
+        Input shape: B, T, D)
+
+        Output shape: (B, T, H)
+    """
     def __init__(self, embed_dim, hidden_size, candidate_activation="tanh"):
         super().__init__()
         self.hidden_size = hidden_size # H

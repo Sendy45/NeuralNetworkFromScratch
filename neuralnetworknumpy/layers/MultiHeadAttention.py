@@ -5,6 +5,17 @@ from .Dense import Dense
 
 
 class MultiHeadAttention(Layer):
+    """
+        Multi-head attention layer.
+
+        Input: (B, T, D) - embeddings
+        Output: (B, T, D) - attended embeddings
+
+        Combines multiple SingleHeadAttention heads:
+            1. Each head computes attention with dimension Dk = D / num_heads
+            2. Head outputs are concatenated
+            3. Linear projection back to original embedding dim (D)
+    """
     def __init__(self, embed_dim, heads_num):
         super().__init__()
 
@@ -15,8 +26,8 @@ class MultiHeadAttention(Layer):
         self.output_projection = Dense(embed_dim, inputs=heads_num * self.key_dim)
 
 
-    def forward(self, emb, mask=None,training=None):
-        outputs = [h.forward(emb) for h in self.heads]
+    def forward(self, emb, context=None, mask=None,training=None):
+        outputs = [h.forward(emb, context=context, mask=mask, training=training) for h in self.heads]
         outputs = np.concatenate(outputs, axis=-1)
         outputs = self.output_projection.forward(outputs)
         return outputs
