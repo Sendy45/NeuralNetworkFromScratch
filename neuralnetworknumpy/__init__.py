@@ -61,6 +61,8 @@ from .masks import (
     combined_mask,
 )
 
+from .backend import np
+
 __all__ = [
     # Core
     "NeuralNetwork",
@@ -111,4 +113,7 @@ __all__ = [
     "causal_mask",
     "padding_mask",
     "combined_mask",
+
+    # Backend
+    "np",
 ]

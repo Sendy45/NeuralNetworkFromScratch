@@ -6,6 +6,7 @@ import plt
 
 from neuralnetworknumpy import NeuralNetwork, Dense, ReLu, BatchNorm, Dropout, Softmax, Scaler, \
     split_train_validation
+from neuralnetworknumpy.learning_rate import LearningRate, LinearWarmup
 
 model = NeuralNetwork([
     Dense(64, inputs=784),
@@ -42,8 +43,9 @@ print("Test X:", test_X.shape, "Test y:", test_y.shape)
 
 
 start_time = time.time()
-model.compile(loss_type="cross_entropy", optimizer="adamW", lr=0.001, lambda_=0.01, beta1=0.9, beta2=0.999)
-history = model.fit(train_X, train_y, val_X, val_y, epochs=3, batch_size=64)
+lr = LinearWarmup(10, 0.001)
+model.compile(loss_type="cross_entropy", optimizer="adamW", lr=lr, lambda_=0.01, beta1=0.9, beta2=0.999)
+history = model.fit(train_X, train_y, val_X, val_y, epochs=10, batch_size=64)
 model.summary()
 model.save("model.h5")
 

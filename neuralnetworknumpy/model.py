@@ -3,6 +3,7 @@ from tqdm.auto import tqdm
 import pickle, os
 
 from .layers import *
+from .learning_rate import LearningRate
 from .utils import History
 
 class NeuralNetwork:
@@ -243,8 +244,11 @@ class NeuralNetwork:
     # Beta2 = RSMprop factor
     def update(self, optimizer_t):
 
+      lr = self.lr
+      if isinstance(self.lr, LearningRate):
+          lr = self.lr(optimizer_t)
       for layer in self.layers:
-          layer.update(self.lambda_, self.lr, self.beta1, self.beta2, self._eps, self.optimizer, optimizer_t)
+          layer.update(self.lambda_, lr, self.beta1, self.beta2, self._eps, self.optimizer, optimizer_t)
 
     """ **********************************************************
     Metrics
