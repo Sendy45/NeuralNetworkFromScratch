@@ -2,9 +2,8 @@ import numpy as np
 from tqdm.auto import tqdm
 import pickle, os
 
-from .layers import *
 from .learning_rate import LearningRate
-from .utils import History
+from neuralnetworknumpy.utils import History
 
 class NeuralNetwork:
     def __init__(self, layers:list):

@@ -43,12 +43,13 @@ from .layers import (
 # tokenizer
 from .tokenizer import (
     Tokenizer,
+    download_tokenizer,
 )
 # Model
 from .model import NeuralNetwork
 
 # Utils
-from .utils import (
+from neuralnetworknumpy.utils import (
     History,
     Scaler,
     split_train_test,
@@ -102,6 +103,10 @@ __all__ = [
     "LSTM",
     "Seq2Seq",
     "TransformerBlock",
+
+    # Tokenizer
+    "Tokenizer",
+    "download_tokenizer",
 
     # Utilities
     "History",
