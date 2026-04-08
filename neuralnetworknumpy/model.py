@@ -348,11 +348,15 @@ class NeuralNetwork:
       np.random.seed(seed)
 
     # need reconstruction to work with cnn and lm
-    """def check_gradient(self, X, y):
-      assert X.shape[0] == y.size, f"X has {X.shape[0]} samples but y has {y.size}"
+    """
+    def check_gradient(self, X, y):
 
       # Use a small batch to avoid numerical issues
-      X = X[:8].astype(np.float64)  # <-- float64 is critical for numerical grad
+      if isinstance(X, tuple):
+          X = tuple(a[:4].astype(np.float64) for a in X)
+      else:
+          X = X[:8].astype(np.float64)  # <-- float64 is critical for numerical grad
+
       y = y[:8]
 
       rel_diff = []
@@ -395,7 +399,8 @@ class NeuralNetwork:
               print(f"Layer {idx} W[{i},{j}]  Numerical: {grad_numerical:.10f}  Analytical: {grad_analytical:.10f}  Rel diff: {rel_diff[-1]:.2e}")
 
       self.lambda_ = original_lambda
-      return rel_diff"""
+      return rel_diff
+      """
 
     # Returns the feature maps of a specific convolutional layer
     def visualize_feature_maps(self, X, layer_index):
@@ -466,7 +471,7 @@ class NeuralNetwork:
           epoch_loss += batch_loss
 
           # Check Gradient - make sure backpropagation works well
-          #self.check_gradient(x_batch, y_batch)
+          # self.check_gradient(x_batch, y_batch)
 
         # Average loss over batches
         epoch_loss /= (n_samples // batch_size)
@@ -598,47 +603,121 @@ class NeuralNetwork:
         predictions = self.predict(X)
         return NeuralNetwork.accuracy(predictions, y)
 
-    """*****************************
-        wrong implementation
-    *****************************"""
+    """**********************************************************
+        Generate for basic transformer or seq2seq models
+    **********************************************************"""
     # Generate response for text (language model only)
-    def generate(self, prompt_ids, tokenizer, max_new_tokens=50, temperature=1.0, seq_len=16):
+    def generate(self, prompt_ids, tokenizer, max_new_tokens=50, temperature=1.0,
+                 seq_len=16, mode="transformer", top_k=10):
         """
-        Autoregressively generate token ids from a prompt.
+        Generate text autoregressively.
 
-        prompt_ids  : list of integer token ids (from tokenizer.encode)
+        mode="transformer": decoder-only transformer (GPT-style)
+        mode="seq2seq"    : encoder-decoder (Seq2Seq layer)
+
+        prompt_ids  : list of integer token ids or raw string
         temperature : > 1.0 = more random, < 1.0 = more focused, 1.0 = neutral
         seq_len     : context window — must match what the model was trained on
+        top_k       : number of top tokens to sample from
         """
-        ids = list(prompt_ids)
+        # Accept raw string or list of ids
+        if isinstance(prompt_ids, str):
+            prompt_ids = tokenizer.encode(prompt_ids)
 
-        for _ in range(max_new_tokens):
-            context = ids[-seq_len:]
+        pad_id = tokenizer.special_tokens.get("<PAD>", 0)
+        eos_id = tokenizer.special_tokens.get("<EOS>", None)
+        start_id = tokenizer.special_tokens.get("<START>", 1)
 
-            # Pad to seq_len if needed
-            if len(context) < seq_len:
-                pad_id = tokenizer.special_tokens.get("<PAD>", 0)
-                context = [pad_id] * (seq_len - len(context)) + context
+        if mode == "transformer":
+            ids = list(prompt_ids)
 
-            x = np.array(context)[np.newaxis, :]  # (1, seq_len)
+            for _ in range(max_new_tokens):
+                # Take last seq_len tokens as context window
+                context = ids[-seq_len:]
 
-            logits = self.forward(x, training=False)  # (1, seq_len, vocab_size)
-            last = logits[0, -1].astype(np.float64)  # (vocab_size,) — last position
+                # Left-pad if shorter than seq_len
+                if len(context) < seq_len:
+                    context = [pad_id] * (seq_len - len(context)) + context
 
-            # Temperature scaling then softmax
-            last /= temperature  # scale first
-            last -= last.max()  # then stabilize
-            probs = np.exp(last) / np.sum(np.exp(last))
+                x = np.array(context)[np.newaxis, :]  # (1, seq_len)
 
-            next_id = self._top_k_sample(probs, k=10)
-            ids.append(int(next_id))
+                # Forward pass - take logits at last position only
+                logits = self.forward(x, training=False)[0, -1].astype(np.float64)  # (vocab_size,)
 
-        return tokenizer.decode(ids)
+                next_id = self._sample(logits, temperature, top_k)
 
-    def _top_k_sample(self, probs, k=10):
-        # Zero out everything except top k probabilities
+                # Stop at EOS if tokenizer has one
+                if eos_id is not None and next_id == eos_id:
+                    break
+
+                ids.append(int(next_id))
+
+            return tokenizer.decode(ids)
+
+        elif mode == "seq2seq":
+            # Encode source prompt
+
+            # Truncate and left-pad src to seq_len
+            src = list(prompt_ids)[-seq_len:]
+            src = [pad_id] * (seq_len - len(src)) + src
+            src = np.array(src, dtype=np.int32)[np.newaxis, :]  # (1, T)
+
+            # Access Seq2Seq layer directly
+            seq2seq = self.layers[0]
+
+            # Run encoder - produces context vector h (and c for LSTM)
+            enc_emb = seq2seq.encoder_embedding.forward(src, training=False)  # (1, T, E)
+            seq2seq.encoder.forward(enc_emb)  # (1, T, H)
+
+            # Final encoder hidden states - seed the decoder
+            h = seq2seq.encoder.h_T  # (1, H)
+            c = getattr(seq2seq.encoder, "c_T", None)  # (1, H) — LSTM only, None for RNN/GRU
+
+            # Autoregressive decoding
+
+            generated_ids = []
+            dec_input_id = start_id  # decoder starts with <START> token
+
+            for _ in range(max_new_tokens):
+                # Single token input per step
+                dec_in = np.array([[dec_input_id]], dtype=np.int32)  # (1, 1)
+                dec_emb = seq2seq.decoder_embedding.forward(dec_in, training=False)  # (1, 1, E)
+
+                # One decoder step — carry hidden state forward
+                dec_h = seq2seq.decoder.forward(dec_emb, h_init=h, c_init=c)  # (1, 1, H)
+
+                # Update hidden state for next step
+                h = seq2seq.decoder.h_T
+                c = getattr(seq2seq.decoder, "c_T", None)
+
+                # Project hidden state to vocab logits
+                logits = seq2seq.out_proj.forward(dec_h[:, -1, :])[0].astype(np.float64)  # (V,)
+                next_id = self._sample(logits, temperature, top_k)
+
+                # Stop at EOS if tokenizer has one
+                if eos_id is not None and next_id == eos_id:
+                    break
+
+                generated_ids.append(int(next_id))
+                dec_input_id = next_id  # feed prediction back as next input
+
+            return tokenizer.decode(generated_ids)
+
+        else:
+            raise ValueError(f"Unknown mode: {mode!r}. Choose 'transformer' or 'seq2seq'.")
+
+    def _sample(self, logits, temperature=1.0, k=10):
+        # Temperature scaling - higher = more random, lower = more focused
+        logits = logits / max(temperature, 1e-8)
+        logits -= logits.max()  # numerical stability before exp
+
+        # Softmax
+        probs = np.exp(logits) / np.sum(np.exp(logits))
+
+        # Top-k filter - zero out all but the k highest probability tokens
         top_k_indices = np.argsort(probs)[-k:]
         filtered = np.zeros_like(probs)
         filtered[top_k_indices] = probs[top_k_indices]
         filtered /= filtered.sum()  # renormalize
-        return np.random.choice(len(filtered), p=filtered)
+
+        return int(np.random.choice(len(filtered), p=filtered))
